@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: ai-laundry
+  profiles:
+    default: local
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    display-request-duration: true
+    groups-order: desc
+    operations-sorter: method
