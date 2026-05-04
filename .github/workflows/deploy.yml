@@ -81,8 +81,8 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd ~/bbosong
             set -e
+            cd ~/bbosong
             docker compose config
             docker compose pull
             docker compose up -d
