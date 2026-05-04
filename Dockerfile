@@ -2,6 +2,10 @@ FROM eclipse-temurin:21-jdk
 
 WORKDIR /app
 
-COPY build/libs/*.jar app.jar
+RUN groupadd --system app && useradd --system --gid app --home-dir /app app
+
+COPY --chown=app:app build/libs/*.jar app.jar
+
+USER app
 
 ENTRYPOINT ["java", "-jar", "app.jar"]
