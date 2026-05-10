@@ -1,5 +1,6 @@
 package com.posong.ai_laundry.domain.clothes.controller;
 
+import com.posong.ai_laundry.domain.clothes.dto.ClothesDetailResDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesSaveReqDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesSaveResDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesSummaryResDto;
@@ -11,7 +12,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -51,5 +54,30 @@ public class ClothesController {
 			@RequestParam(required = false) String category
 	) {
 		return ApiResponse.success(clothesService.getClothes(memberId, category));
+	}
+
+	@Operation(
+			summary = "의류 상세 조회",
+			description = "로그인한 회원이 저장한 특정 의류의 상세 정보를 조회합니다."
+	)
+	@GetMapping("/{clothesId}")
+	public ApiResponse<ClothesDetailResDto> getClothesDetail(
+			@AuthenticationPrincipal Long memberId,
+			@PathVariable Long clothesId
+	) {
+		return ApiResponse.success(clothesService.getClothesDetail(memberId, clothesId));
+	}
+
+	@Operation(
+			summary = "의류 삭제",
+			description = "로그인한 회원이 저장한 특정 의류를 삭제합니다."
+	)
+	@DeleteMapping("/{clothesId}")
+	public ApiResponse<Void> delete(
+			@AuthenticationPrincipal Long memberId,
+			@PathVariable Long clothesId
+	) {
+		clothesService.delete(memberId, clothesId);
+		return ApiResponse.success();
 	}
 }

@@ -1,6 +1,7 @@
 package com.posong.ai_laundry.domain.clothes.service;
 
 import com.posong.ai_laundry.domain.clothes.constant.ClothesCategory;
+import com.posong.ai_laundry.domain.clothes.dto.ClothesDetailResDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesSaveReqDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesSaveResDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesSummaryResDto;
@@ -56,6 +57,22 @@ public class ClothesService {
 		return clothesList.stream()
 				.map(clothesMapper::toClothesSummaryResDto)
 				.toList();
+	}
+
+	public ClothesDetailResDto getClothesDetail(Long memberId, Long clothesId) {
+		Clothes clothes = getOwnedClothes(memberId, clothesId);
+		return clothesMapper.toClothesDetailResDto(clothes);
+	}
+
+	@Transactional
+	public void delete(Long memberId, Long clothesId) {
+		Clothes clothes = getOwnedClothes(memberId, clothesId);
+		clothesRepository.delete(clothes);
+	}
+
+	private Clothes getOwnedClothes(Long memberId, Long clothesId) {
+		return clothesRepository.findByClothesIdAndMember_MemberId(clothesId, memberId)
+				.orElseThrow(() -> new GeneralException(ClothesErrorCode.CLOTHES_NOT_FOUND));
 	}
 
 	private String normalizeCategoryName(String categoryName) {

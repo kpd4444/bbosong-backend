@@ -14,7 +14,8 @@ public enum ClothesErrorCode implements BaseErrorCode {
 	CLOTHES_ANALYSIS_FAILED("CLOTHES_003", "의류 이미지 분석에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
 	INVALID_ANALYSIS_RESULT("CLOTHES_004", "의류 분석 결과를 해석할 수 없습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
 	CATEGORY_REQUIRED("CLOTHES_005", "의류 카테고리는 필수입니다.", HttpStatus.BAD_REQUEST),
-	INVALID_CATEGORY("CLOTHES_006", "지원하지 않는 의류 카테고리입니다.", HttpStatus.BAD_REQUEST);
+	INVALID_CATEGORY("CLOTHES_006", "지원하지 않는 의류 카테고리입니다.", HttpStatus.BAD_REQUEST),
+	CLOTHES_NOT_FOUND("CLOTHES_007", "의류 정보를 찾을 수 없습니다.", HttpStatus.NOT_FOUND);
 
 	private final String code;
 	private final String message;
