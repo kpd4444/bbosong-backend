@@ -12,5 +12,13 @@ public interface ClothesRepository extends JpaRepository<Clothes, Long> {
 
 	List<Clothes> findAllByMember_MemberIdAndCategory_NameOrderByCreatedAtDesc(Long memberId, String categoryName);
 
+	List<Clothes> findAllByMember_MemberIdAndNameContainingOrderByCreatedAtDesc(Long memberId, String keyword);
+
+	List<Clothes> findAllByMember_MemberIdAndCategory_NameAndNameContainingOrderByCreatedAtDesc(
+			Long memberId, String categoryName, String keyword
+	);
+
+	List<Clothes> findAllByMember_MemberIdAndIsFavoriteTrueOrderByCreatedAtDesc(Long memberId);
+
 	Optional<Clothes> findByClothesIdAndMember_MemberId(Long clothesId, Long memberId);
 }

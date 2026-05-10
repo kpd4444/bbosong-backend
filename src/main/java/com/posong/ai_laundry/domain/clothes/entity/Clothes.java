@@ -90,4 +90,8 @@ public class Clothes {
 	void onUpdate() {
 		updatedAt = LocalDateTime.now();
 	}
+
+	public void toggleFavorite() {
+		this.isFavorite = !this.isFavorite;
+	}
 }

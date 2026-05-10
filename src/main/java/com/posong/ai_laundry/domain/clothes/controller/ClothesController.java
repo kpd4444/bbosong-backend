@@ -1,6 +1,7 @@
 package com.posong.ai_laundry.domain.clothes.controller;
 
 import com.posong.ai_laundry.domain.clothes.dto.ClothesDetailResDto;
+import com.posong.ai_laundry.domain.clothes.dto.ClothesFavoriteResDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesSaveReqDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesSaveResDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesSummaryResDto;
@@ -14,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -79,5 +81,41 @@ public class ClothesController {
 	) {
 		clothesService.delete(memberId, clothesId);
 		return ApiResponse.success();
+	}
+
+	@Operation(
+			summary = "의류 검색",
+			description = "로그인한 회원의 옷장에서 이름 기준으로 의류를 검색합니다. category를 함께 주면 해당 카테고리 안에서만 검색합니다."
+	)
+	@GetMapping("/search")
+	public ApiResponse<List<ClothesSummaryResDto>> search(
+			@AuthenticationPrincipal Long memberId,
+			@Parameter(description = "검색어입니다. 의류 이름 기준 부분 검색을 수행합니다.", example = "니트")
+			@RequestParam String keyword,
+			@Parameter(description = "카테고리 필터입니다. 없으면 전체 카테고리에서 검색합니다.", example = "상의")
+			@RequestParam(required = false) String category
+	) {
+		return ApiResponse.success(clothesService.search(memberId, category, keyword));
+	}
+
+	@Operation(
+			summary = "의류 즐겨찾기 토글",
+			description = "로그인한 회원이 저장한 특정 의류의 즐겨찾기 상태를 토글합니다."
+	)
+	@PatchMapping("/{clothesId}/favorite")
+	public ApiResponse<ClothesFavoriteResDto> toggleFavorite(
+			@AuthenticationPrincipal Long memberId,
+			@PathVariable Long clothesId
+	) {
+		return ApiResponse.success(clothesService.toggleFavorite(memberId, clothesId));
+	}
+
+	@Operation(
+			summary = "즐겨찾기 의류 조회",
+			description = "로그인한 회원이 즐겨찾기한 의류 목록만 최신순으로 조회합니다."
+	)
+	@GetMapping("/favorites")
+	public ApiResponse<List<ClothesSummaryResDto>> getFavorites(@AuthenticationPrincipal Long memberId) {
+		return ApiResponse.success(clothesService.getFavorites(memberId));
 	}
 }

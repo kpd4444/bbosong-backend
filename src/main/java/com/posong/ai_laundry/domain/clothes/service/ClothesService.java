@@ -2,6 +2,7 @@ package com.posong.ai_laundry.domain.clothes.service;
 
 import com.posong.ai_laundry.domain.clothes.constant.ClothesCategory;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesDetailResDto;
+import com.posong.ai_laundry.domain.clothes.dto.ClothesFavoriteResDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesSaveReqDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesSaveResDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesSummaryResDto;
@@ -46,8 +47,7 @@ public class ClothesService {
 	}
 
 	public List<ClothesSummaryResDto> getClothes(Long memberId, String categoryName) {
-		memberRepository.findById(memberId)
-				.orElseThrow(() -> new GeneralException(MemberErrorCode.MEMBER_NOT_FOUND));
+		validateMember(memberId);
 
 		List<Clothes> clothesList = hasText(categoryName)
 				? clothesRepository.findAllByMember_MemberIdAndCategory_NameOrderByCreatedAtDesc(
@@ -70,9 +70,45 @@ public class ClothesService {
 		clothesRepository.delete(clothes);
 	}
 
+	public List<ClothesSummaryResDto> search(Long memberId, String categoryName, String keyword) {
+		validateMember(memberId);
+		if (!hasText(keyword)) {
+			return List.of();
+		}
+
+		List<Clothes> clothesList = hasText(categoryName)
+				? clothesRepository.findAllByMember_MemberIdAndCategory_NameAndNameContainingOrderByCreatedAtDesc(
+						memberId, normalizeCategoryName(categoryName), keyword)
+				: clothesRepository.findAllByMember_MemberIdAndNameContainingOrderByCreatedAtDesc(memberId, keyword);
+
+		return clothesList.stream()
+				.map(clothesMapper::toClothesSummaryResDto)
+				.toList();
+	}
+
+	@Transactional
+	public ClothesFavoriteResDto toggleFavorite(Long memberId, Long clothesId) {
+		Clothes clothes = getOwnedClothes(memberId, clothesId);
+		clothes.toggleFavorite();
+		return clothesMapper.toClothesFavoriteResDto(clothes);
+	}
+
+	public List<ClothesSummaryResDto> getFavorites(Long memberId) {
+		validateMember(memberId);
+		return clothesRepository.findAllByMember_MemberIdAndIsFavoriteTrueOrderByCreatedAtDesc(memberId)
+				.stream()
+				.map(clothesMapper::toClothesSummaryResDto)
+				.toList();
+	}
+
 	private Clothes getOwnedClothes(Long memberId, Long clothesId) {
 		return clothesRepository.findByClothesIdAndMember_MemberId(clothesId, memberId)
 				.orElseThrow(() -> new GeneralException(ClothesErrorCode.CLOTHES_NOT_FOUND));
+	}
+
+	private void validateMember(Long memberId) {
+		memberRepository.findById(memberId)
+				.orElseThrow(() -> new GeneralException(MemberErrorCode.MEMBER_NOT_FOUND));
 	}
 
 	private String normalizeCategoryName(String categoryName) {
