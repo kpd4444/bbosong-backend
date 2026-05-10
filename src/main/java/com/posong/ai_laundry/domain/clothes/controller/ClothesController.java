@@ -1,0 +1,55 @@
+package com.posong.ai_laundry.domain.clothes.controller;
+
+import com.posong.ai_laundry.domain.clothes.dto.ClothesSaveReqDto;
+import com.posong.ai_laundry.domain.clothes.dto.ClothesSaveResDto;
+import com.posong.ai_laundry.domain.clothes.dto.ClothesSummaryResDto;
+import com.posong.ai_laundry.domain.clothes.service.ClothesService;
+import com.posong.ai_laundry.global.response.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+@RestController
+@Tag(name = "Clothes Closet", description = "의류 저장 및 옷장 조회 API")
+@RequiredArgsConstructor
+@RequestMapping("/api/clothes")
+public class ClothesController {
+
+	private final ClothesService clothesService;
+
+	@Operation(
+			summary = "의류 저장",
+			description = "분석 결과를 확인한 뒤 의류 정보를 옷장에 저장합니다. 카테고리 값은 서버에서 정규화한 뒤 category 테이블과 연결합니다."
+	)
+	@PostMapping
+	public ApiResponse<ClothesSaveResDto> save(
+			@AuthenticationPrincipal Long memberId,
+			@Valid @RequestBody ClothesSaveReqDto request
+	) {
+		return ApiResponse.success(clothesService.save(memberId, request));
+	}
+
+	@Operation(
+			summary = "옷장 목록 조회",
+			description = "로그인한 회원의 옷장 목록을 최신순으로 조회합니다. category 쿼리 파라미터를 주면 해당 카테고리만 조회합니다."
+	)
+	@GetMapping
+	public ApiResponse<List<ClothesSummaryResDto>> getClothes(
+			@AuthenticationPrincipal Long memberId,
+			@Parameter(description = "조회할 카테고리입니다. 예: 상의, 하의, 아우터", example = "상의")
+			@RequestParam(required = false) String category
+	) {
+		return ApiResponse.success(clothesService.getClothes(memberId, category));
+	}
+}
