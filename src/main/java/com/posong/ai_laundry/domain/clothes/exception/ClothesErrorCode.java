@@ -1,0 +1,20 @@
+package com.posong.ai_laundry.domain.clothes.exception;
+
+import com.posong.ai_laundry.global.error.code.BaseErrorCode;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+
+@Getter
+@RequiredArgsConstructor
+public enum ClothesErrorCode implements BaseErrorCode {
+
+	IMAGE_REQUIRED("CLOTHES_001", "의류 이미지는 필수입니다.", HttpStatus.BAD_REQUEST),
+	INVALID_IMAGE_TYPE("CLOTHES_002", "이미지 파일만 업로드할 수 있습니다.", HttpStatus.BAD_REQUEST),
+	CLOTHES_ANALYSIS_FAILED("CLOTHES_003", "의류 이미지 분석에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
+	INVALID_ANALYSIS_RESULT("CLOTHES_004", "의류 분석 결과를 해석할 수 없습니다.", HttpStatus.INTERNAL_SERVER_ERROR);
+
+	private final String code;
+	private final String message;
+	private final HttpStatus status;
+}
