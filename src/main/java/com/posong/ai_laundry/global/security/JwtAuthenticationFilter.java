@@ -1,7 +1,6 @@
 package com.posong.ai_laundry.global.security;
 
 import com.posong.ai_laundry.global.security.exception.AuthErrorCode;
-import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -42,26 +41,33 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 			return;
 		}
 
-		// "Bearer " 떼기
 		String accessToken = bearerToken.substring(BEARER_PREFIX.length());
 
-		try {
-			if (!jwtTokenProvider.isAccessToken(accessToken)) {
-				request.setAttribute(
-						JwtAuthenticationEntryPoint.AUTH_ERROR_CODE_ATTRIBUTE,
-						AuthErrorCode.INVALID_ACCESS_TOKEN_TYPE
-				);
-				filterChain.doFilter(request, response);
-				return;
-			}
-
-			SecurityContextHolder.getContext().setAuthentication(jwtTokenProvider.getAuthentication(accessToken));
-		} catch (JwtException exception) {
+		if (jwtTokenProvider.isExpired(accessToken)) {
 			request.setAttribute(
 					JwtAuthenticationEntryPoint.AUTH_ERROR_CODE_ATTRIBUTE,
-					jwtTokenProvider.isExpired(accessToken)
-							? AuthErrorCode.EXPIRED_ACCESS_TOKEN
-							: AuthErrorCode.INVALID_ACCESS_TOKEN
+					AuthErrorCode.EXPIRED_ACCESS_TOKEN
+			);
+			filterChain.doFilter(request, response);
+			return;
+		}
+
+		if (!jwtTokenProvider.isAccessToken(accessToken)) {
+			request.setAttribute(
+					JwtAuthenticationEntryPoint.AUTH_ERROR_CODE_ATTRIBUTE,
+					AuthErrorCode.INVALID_ACCESS_TOKEN_TYPE
+			);
+			filterChain.doFilter(request, response);
+			return;
+		}
+
+		try {
+			// access token이 유효하면 인증 정보를 컨텍스트에 넣는다.
+			SecurityContextHolder.getContext().setAuthentication(jwtTokenProvider.getAuthentication(accessToken));
+		} catch (IllegalArgumentException exception) {
+			request.setAttribute(
+					JwtAuthenticationEntryPoint.AUTH_ERROR_CODE_ATTRIBUTE,
+					AuthErrorCode.INVALID_ACCESS_TOKEN
 			);
 		}
 

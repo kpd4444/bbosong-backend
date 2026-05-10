@@ -19,6 +19,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Optional;
 
 @Component
 public class JwtTokenProvider {
@@ -53,7 +54,9 @@ public class JwtTokenProvider {
 	}
 
 	public Authentication getAuthentication(String accessToken) {
-		Long memberId = getMemberId(accessToken);
+		Long memberId = getMemberId(accessToken)
+				.orElseThrow(() -> new IllegalArgumentException("유효한 액세스 토큰이 아닙니다."));
+
 		return new UsernamePasswordAuthenticationToken(
 				memberId,
 				null,
@@ -73,15 +76,23 @@ public class JwtTokenProvider {
 	}
 
 	public boolean isRefreshToken(String token) {
-		return TokenType.REFRESH.name().equals(getTokenType(token));
+		return getTokenType(token)
+				.map(TokenType.REFRESH.name()::equals)
+				.orElse(false);
 	}
 
 	public boolean isAccessToken(String token) {
-		return TokenType.ACCESS.name().equals(getTokenType(token));
+		return getTokenType(token)
+				.map(TokenType.ACCESS.name()::equals)
+				.orElse(false);
 	}
 
-	public Long getMemberId(String token) {
-		return Long.parseLong(parseClaims(token).getSubject());
+	public Optional<Long> getMemberId(String token) {
+		try {
+			return Optional.of(Long.parseLong(parseClaims(token).getSubject()));
+		} catch (JwtException | IllegalArgumentException exception) {
+			return Optional.empty();
+		}
 	}
 
 	private String generateToken(Long memberId, TokenType tokenType, LocalDateTime expiresAt) {
@@ -94,8 +105,12 @@ public class JwtTokenProvider {
 				.compact();
 	}
 
-	private String getTokenType(String token) {
-		return parseClaims(token).get(TOKEN_TYPE_CLAIM, String.class);
+	private Optional<String> getTokenType(String token) {
+		try {
+			return Optional.ofNullable(parseClaims(token).get(TOKEN_TYPE_CLAIM, String.class));
+		} catch (JwtException | IllegalArgumentException exception) {
+			return Optional.empty();
+		}
 	}
 
 	private Claims parseClaims(String token) {

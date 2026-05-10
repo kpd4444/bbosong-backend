@@ -12,6 +12,6 @@ springdoc:
     operations-sorter: method
 
 jwt:
-  secret: ${JWT_SECRET:ai-laundry-default-jwt-secret-key-for-local-only-change-this}
+  secret: ${JWT_SECRET}
   access-token-expiration-seconds: ${JWT_ACCESS_TOKEN_EXPIRATION_SECONDS:1800}
   refresh-token-expiration-seconds: ${JWT_REFRESH_TOKEN_EXPIRATION_SECONDS:1209600}

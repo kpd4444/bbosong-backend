@@ -17,6 +17,7 @@ import com.posong.ai_laundry.domain.member.repository.MemberRepository;
 import com.posong.ai_laundry.domain.member.repository.RefreshTokenRepository;
 import com.posong.ai_laundry.global.error.exception.GeneralException;
 import com.posong.ai_laundry.global.security.JwtTokenProvider;
+import com.posong.ai_laundry.global.security.RefreshTokenHashProvider;
 import com.posong.ai_laundry.global.security.TokenPair;
 import com.posong.ai_laundry.global.security.exception.AuthErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,7 @@ public class LocalAuthService {
 	private final MemberMapper memberMapper;
 	private final PasswordEncoder passwordEncoder;
 	private final JwtTokenProvider jwtTokenProvider;
+	private final RefreshTokenHashProvider refreshTokenHashProvider;
 
 	@Transactional
 	public LocalSignUpResDto signUp(LocalSignUpReqDto request) {
@@ -77,17 +79,22 @@ public class LocalAuthService {
 			throw new GeneralException(AuthErrorCode.INVALID_REFRESH_TOKEN_TYPE);
 		}
 
-		Long memberId = jwtTokenProvider.getMemberId(request.refreshToken());
-		RefreshToken refreshToken = refreshTokenRepository.findByMember_MemberId(memberId)
+		Long memberId = jwtTokenProvider.getMemberId(request.refreshToken())
 				.orElseThrow(() -> new GeneralException(AuthErrorCode.INVALID_REFRESH_TOKEN));
+		String currentRefreshTokenHash = refreshTokenHashProvider.hash(request.refreshToken());
 
-		if (!refreshToken.getToken().equals(request.refreshToken())) {
+		// 현재 저장된 refresh token과 일치할 때만 새 토큰으로 교체한다.
+		TokenPair tokenPair = jwtTokenProvider.generateTokenPair(memberId);
+		int updatedCount = refreshTokenRepository.rotateToken(
+				memberId,
+				currentRefreshTokenHash,
+				refreshTokenHashProvider.hash(tokenPair.refreshToken()),
+				tokenPair.refreshTokenExpiresAt()
+		);
+
+		if (updatedCount == 0) {
 			throw new GeneralException(AuthErrorCode.TOKEN_MEMBER_MISMATCH);
 		}
-
-		// 재발급 시 access, refresh 토큰을 모두 새로 만든다.
-		TokenPair tokenPair = jwtTokenProvider.generateTokenPair(memberId);
-		refreshToken.updateToken(tokenPair.refreshToken(), tokenPair.refreshTokenExpiresAt());
 
 		return memberMapper.toTokenReissueResDto(tokenPair);
 	}
@@ -114,14 +121,16 @@ public class LocalAuthService {
 	}
 
 	private void saveRefreshToken(Member member, String token, LocalDateTime expiresAt) {
+		String refreshTokenHash = refreshTokenHashProvider.hash(token);
+
 		// 한 회원당 refresh token 하나만 유지한다.
 		refreshTokenRepository.findByMember_MemberId(member.getMemberId())
 				.ifPresentOrElse(
-						refreshToken -> refreshToken.updateToken(token, expiresAt),
+						refreshToken -> refreshToken.updateToken(refreshTokenHash, expiresAt),
 						() -> refreshTokenRepository.save(
 								RefreshToken.builder()
 										.member(member)
-										.token(token)
+										.token(refreshTokenHash)
 										.expiresAt(expiresAt)
 										.build()
 						)

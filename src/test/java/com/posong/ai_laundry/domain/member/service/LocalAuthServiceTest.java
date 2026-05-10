@@ -11,6 +11,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import java.util.UUID;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
@@ -21,19 +23,23 @@ class LocalAuthServiceTest {
 
 	@Test
 	void signUpLoginReissueAndLoadMyProfile() {
+		String uniqueSuffix = UUID.randomUUID().toString().substring(0, 8);
+		String loginId = "bbosong-user-" + uniqueSuffix;
+		String email = "bbosong-" + uniqueSuffix + "@example.com";
+
 		LocalSignUpResDto signUpResponse = localAuthService.signUp(
 				new LocalSignUpReqDto(
-						"bbosong-user",
+						loginId,
 						"password1234",
-						"bbosong@example.com"
+						email
 				)
 		);
 
-		assertThat(signUpResponse.loginId()).isEqualTo("bbosong-user");
-		assertThat(signUpResponse.email()).isEqualTo("bbosong@example.com");
+		assertThat(signUpResponse.loginId()).isEqualTo(loginId);
+		assertThat(signUpResponse.email()).isEqualTo(email);
 
 		LocalLoginResDto loginResponse = localAuthService.login(
-				new LocalLoginReqDto("bbosong-user", "password1234")
+				new LocalLoginReqDto(loginId, "password1234")
 		);
 
 		assertThat(loginResponse.grantType()).isEqualTo("Bearer");
@@ -49,7 +55,7 @@ class LocalAuthServiceTest {
 
 		MemberProfileResDto profileResponse = localAuthService.getMyProfile(signUpResponse.memberId());
 
-		assertThat(profileResponse.email()).isEqualTo("bbosong@example.com");
+		assertThat(profileResponse.email()).isEqualTo(email);
 		assertThat(profileResponse.nickname()).isNull();
 		assertThat(profileResponse.birth()).isNull();
 	}
