@@ -15,6 +15,7 @@ import com.posong.ai_laundry.domain.member.exception.MemberErrorCode;
 import com.posong.ai_laundry.domain.member.repository.MemberRepository;
 import com.posong.ai_laundry.global.error.exception.GeneralException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,7 +38,7 @@ public class ClothesService {
 
 		String normalizedCategoryName = normalizeCategoryName(request.categoryName());
 		Category category = categoryRepository.findByName(normalizedCategoryName)
-				.orElseGet(() -> categoryRepository.save(Category.builder().name(normalizedCategoryName).build()));
+				.orElseGet(() -> createCategorySafely(normalizedCategoryName));
 
 		Clothes clothes = clothesRepository.save(clothesMapper.toClothes(member, category, request));
 		return clothesMapper.toClothesSaveResDto(clothes);
@@ -72,5 +73,13 @@ public class ClothesService {
 
 	private boolean hasText(String value) {
 		return value != null && !value.isBlank();
+	}
+
+	private Category createCategorySafely(String categoryName) {
+		try {
+			return categoryRepository.save(Category.builder().name(categoryName).build());
+		} catch (DataIntegrityViolationException exception) {
+			return categoryRepository.findByName(categoryName).orElseThrow(() -> exception);
+		}
 	}
 }
