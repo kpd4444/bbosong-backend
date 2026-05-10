@@ -4,10 +4,13 @@ import com.posong.ai_laundry.domain.clothes.entity.Clothes;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ClothesRepository extends JpaRepository<Clothes, Long> {
 
 	List<Clothes> findAllByMember_MemberIdOrderByCreatedAtDesc(Long memberId);
 
 	List<Clothes> findAllByMember_MemberIdAndCategory_NameOrderByCreatedAtDesc(Long memberId, String categoryName);
+
+	Optional<Clothes> findByClothesIdAndMember_MemberId(Long clothesId, Long memberId);
 }

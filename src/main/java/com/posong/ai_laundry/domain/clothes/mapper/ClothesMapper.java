@@ -2,6 +2,7 @@ package com.posong.ai_laundry.domain.clothes.mapper;
 
 import com.posong.ai_laundry.domain.clothes.dto.ClothesSaveReqDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesSaveResDto;
+import com.posong.ai_laundry.domain.clothes.dto.ClothesDetailResDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesSummaryResDto;
 import com.posong.ai_laundry.domain.clothes.entity.Category;
 import com.posong.ai_laundry.domain.clothes.entity.Clothes;
@@ -40,6 +41,21 @@ public class ClothesMapper {
 				clothes.getCategory() == null ? null : clothes.getCategory().getName(),
 				clothes.getName(),
 				clothes.getColor(),
+				clothes.getImageUrl(),
+				clothes.isFavorite(),
+				clothes.getCreatedAt()
+		);
+	}
+
+	public ClothesDetailResDto toClothesDetailResDto(Clothes clothes) {
+		return new ClothesDetailResDto(
+				clothes.getClothesId(),
+				clothes.getCategory() == null ? null : clothes.getCategory().getName(),
+				clothes.getName(),
+				clothes.getMaterial(),
+				clothes.getColor(),
+				clothes.getWashingMethod(),
+				clothes.getCaution(),
 				clothes.getImageUrl(),
 				clothes.isFavorite(),
 				clothes.getCreatedAt()
