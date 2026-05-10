@@ -68,6 +68,8 @@ public class ClothesAnalysisService {
 			ClothesAnalysisAiResDto result = outputConverter.convert(responseText);
 			validateResult(result);
 			return ClothesAnalysisResDto.from(result);
+		} catch (GeneralException exception) {
+			throw exception;
 		} catch (Exception exception) {
 			throw new GeneralException(ClothesErrorCode.CLOTHES_ANALYSIS_FAILED);
 		}
@@ -79,7 +81,12 @@ public class ClothesAnalysisService {
 		}
 
 		String contentType = image.getContentType();
-		if (contentType == null || !contentType.startsWith("image/")) {
+		try {
+			MimeType mimeType = MimeType.valueOf(contentType == null ? "" : contentType);
+			if (!"image".equalsIgnoreCase(mimeType.getType())) {
+				throw new GeneralException(ClothesErrorCode.INVALID_IMAGE_TYPE);
+			}
+		} catch (IllegalArgumentException exception) {
 			throw new GeneralException(ClothesErrorCode.INVALID_IMAGE_TYPE);
 		}
 	}
