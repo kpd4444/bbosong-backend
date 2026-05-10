@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:ai_laundry;MODE=MySQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+        show_sql: false
+
+jwt:
+  secret: test-jwt-secret-key-for-ai-laundry-should-be-long-enough
+  access-token-expiration-seconds: 1800
+  refresh-token-expiration-seconds: 1209600

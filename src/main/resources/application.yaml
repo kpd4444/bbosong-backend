@@ -10,3 +10,8 @@ springdoc:
     display-request-duration: true
     groups-order: desc
     operations-sorter: method
+
+jwt:
+  secret: ${JWT_SECRET:ai-laundry-default-jwt-secret-key-for-local-only-change-this}
+  access-token-expiration-seconds: ${JWT_ACCESS_TOKEN_EXPIRATION_SECONDS:1800}
+  refresh-token-expiration-seconds: ${JWT_REFRESH_TOKEN_EXPIRATION_SECONDS:1209600}
