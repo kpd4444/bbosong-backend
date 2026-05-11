@@ -12,6 +12,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -65,6 +66,9 @@ public class Clothes {
 	@Column(name = "updated_at", nullable = false)
 	private LocalDateTime updatedAt;
 
+	@Version
+	private Long version;
+
 	@Builder
 	private Clothes(Member member, Category category, String name, String material, String color,
 				 String washingMethod, String caution, String imageUrl, boolean isFavorite) {
@@ -89,5 +93,9 @@ public class Clothes {
 	@PreUpdate
 	void onUpdate() {
 		updatedAt = LocalDateTime.now();
+	}
+
+	public void setFavorite(boolean favorite) {
+		this.isFavorite = favorite;
 	}
 }
