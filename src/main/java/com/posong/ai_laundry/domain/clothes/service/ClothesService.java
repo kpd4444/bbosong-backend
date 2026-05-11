@@ -2,6 +2,7 @@ package com.posong.ai_laundry.domain.clothes.service;
 
 import com.posong.ai_laundry.domain.clothes.constant.ClothesCategory;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesDetailResDto;
+import com.posong.ai_laundry.domain.clothes.dto.ClothesFavoriteReqDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesFavoriteResDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesSaveReqDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesSaveResDto;
@@ -18,6 +19,7 @@ import com.posong.ai_laundry.domain.member.repository.MemberRepository;
 import com.posong.ai_laundry.global.error.exception.GeneralException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -72,14 +74,15 @@ public class ClothesService {
 
 	public List<ClothesSummaryResDto> search(Long memberId, String categoryName, String keyword) {
 		validateMember(memberId);
-		if (!hasText(keyword)) {
+		String normalizedKeyword = keyword == null ? null : keyword.trim();
+		if (!hasText(normalizedKeyword)) {
 			return List.of();
 		}
 
 		List<Clothes> clothesList = hasText(categoryName)
 				? clothesRepository.findAllByMember_MemberIdAndCategory_NameAndNameContainingOrderByCreatedAtDesc(
-						memberId, normalizeCategoryName(categoryName), keyword)
-				: clothesRepository.findAllByMember_MemberIdAndNameContainingOrderByCreatedAtDesc(memberId, keyword);
+						memberId, normalizeCategoryName(categoryName), normalizedKeyword)
+				: clothesRepository.findAllByMember_MemberIdAndNameContainingOrderByCreatedAtDesc(memberId, normalizedKeyword);
 
 		return clothesList.stream()
 				.map(clothesMapper::toClothesSummaryResDto)
@@ -87,10 +90,17 @@ public class ClothesService {
 	}
 
 	@Transactional
-	public ClothesFavoriteResDto toggleFavorite(Long memberId, Long clothesId) {
+	public ClothesFavoriteResDto setFavorite(Long memberId, Long clothesId, ClothesFavoriteReqDto request) {
 		Clothes clothes = getOwnedClothes(memberId, clothesId);
-		clothes.toggleFavorite();
-		return clothesMapper.toClothesFavoriteResDto(clothes);
+		try {
+			if (clothes.isFavorite() != request.favorite()) {
+				clothes.setFavorite(request.favorite());
+			}
+			Clothes savedClothes = clothesRepository.saveAndFlush(clothes);
+			return clothesMapper.toClothesFavoriteResDto(savedClothes);
+		} catch (ObjectOptimisticLockingFailureException exception) {
+			throw new GeneralException(ClothesErrorCode.FAVORITE_CONFLICT);
+		}
 	}
 
 	public List<ClothesSummaryResDto> getFavorites(Long memberId) {

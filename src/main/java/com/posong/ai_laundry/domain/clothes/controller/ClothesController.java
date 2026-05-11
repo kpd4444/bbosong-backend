@@ -1,6 +1,7 @@
 package com.posong.ai_laundry.domain.clothes.controller;
 
 import com.posong.ai_laundry.domain.clothes.dto.ClothesDetailResDto;
+import com.posong.ai_laundry.domain.clothes.dto.ClothesFavoriteReqDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesFavoriteResDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesSaveReqDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesSaveResDto;
@@ -103,11 +104,12 @@ public class ClothesController {
 			description = "로그인한 회원이 저장한 특정 의류의 즐겨찾기 상태를 토글합니다."
 	)
 	@PatchMapping("/{clothesId}/favorite")
-	public ApiResponse<ClothesFavoriteResDto> toggleFavorite(
+	public ApiResponse<ClothesFavoriteResDto> setFavorite(
 			@AuthenticationPrincipal Long memberId,
-			@PathVariable Long clothesId
+			@PathVariable Long clothesId,
+			@Valid @RequestBody ClothesFavoriteReqDto request
 	) {
-		return ApiResponse.success(clothesService.toggleFavorite(memberId, clothesId));
+		return ApiResponse.success(clothesService.setFavorite(memberId, clothesId, request));
 	}
 
 	@Operation(
