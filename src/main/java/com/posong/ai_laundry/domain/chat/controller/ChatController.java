@@ -45,9 +45,9 @@ public class ChatController {
 	public ApiResponse<ChatSendResDto> sendMessage(
 			@AuthenticationPrincipal Long memberId,
 			@Parameter(description = "사용자가 전송할 채팅 메시지입니다. 이미지 없이 텍스트만 보내도 됩니다.", example = "이 니트는 어떻게 세탁해야 해?")
-			@RequestPart(required = false) String content,
+			@RequestPart(value = "content", required = false) String content,
 			@Parameter(description = "상담에 함께 보낼 이미지 파일입니다. 텍스트 없이 이미지만 보내도 됩니다.")
-			@RequestPart(required = false) MultipartFile image
+			@RequestPart(value = "image", required = false) MultipartFile image
 	) {
 		return ApiResponse.success(chatService.sendMessage(memberId, content, image));
 	}

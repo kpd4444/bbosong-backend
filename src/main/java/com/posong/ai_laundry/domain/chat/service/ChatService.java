@@ -13,6 +13,7 @@ import com.posong.ai_laundry.domain.member.entity.Member;
 import com.posong.ai_laundry.domain.member.exception.MemberErrorCode;
 import com.posong.ai_laundry.domain.member.repository.MemberRepository;
 import com.posong.ai_laundry.global.error.exception.GeneralException;
+import com.posong.ai_laundry.global.file.ImageFileValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
@@ -27,7 +28,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.MimeType;
-import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
@@ -37,6 +37,8 @@ import java.util.List;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ChatService {
+
+	private static final int MAX_CONTEXT_MESSAGES = 40;
 
 	private static final String SYSTEM_PROMPT = """
 			너는 세탁 상담을 도와주는 AI다.
@@ -60,7 +62,7 @@ public class ChatService {
 	public List<ChatMessageResDto> getMessages(Long memberId) {
 		validateMember(memberId);
 		return chatRoomRepository.findByMember_MemberId(memberId)
-				.map(chatRoom -> chatMessageRepository.findAllByChatRoom_ChatRoomIdOrderByCreatedAtAsc(chatRoom.getChatRoomId())
+				.map(chatRoom -> chatMessageRepository.findAllByChatRoom_ChatRoomIdOrderByCreatedAtAscChatMessageIdAsc(chatRoom.getChatRoomId())
 						.stream()
 						.map(chatMapper::toChatMessageResDto)
 						.toList())
@@ -71,7 +73,7 @@ public class ChatService {
 	public ChatSendResDto sendMessage(Long memberId, String content, MultipartFile image) {
 		Member member = memberRepository.findById(memberId)
 				.orElseThrow(() -> new GeneralException(MemberErrorCode.MEMBER_NOT_FOUND));
-		validateInput(content, image);
+		MimeType imageMimeType = validateInput(content, image);
 
 		ChatRoom chatRoom = chatRoomRepository.findByMember_MemberId(memberId)
 				.orElseGet(() -> createChatRoomSafely(member));
@@ -80,10 +82,19 @@ public class ChatService {
 		String savedUserContent = hasText(normalizedContent) ? normalizedContent : IMAGE_ONLY_PLACEHOLDER;
 
 		ChatMessage userMessage = chatMessageRepository.save(chatMapper.toUserMessage(chatRoom, savedUserContent));
-		List<ChatMessage> messages = chatMessageRepository.findAllByChatRoom_ChatRoomIdOrderByCreatedAtAsc(chatRoom.getChatRoomId());
+		List<ChatMessage> messages = chatMessageRepository.findAllByChatRoom_ChatRoomIdOrderByCreatedAtAscChatMessageIdAsc(chatRoom.getChatRoomId());
+		if (messages.size() > MAX_CONTEXT_MESSAGES) {
+			messages = messages.subList(messages.size() - MAX_CONTEXT_MESSAGES, messages.size());
+		}
 
 		try {
-			String assistantAnswer = generateAssistantAnswer(messages, normalizedContent, image);
+			String assistantAnswer = generateAssistantAnswer(
+					messages,
+					userMessage.getChatMessageId(),
+					normalizedContent,
+					image,
+					imageMimeType
+			);
 			ChatMessage assistantMessage = chatMessageRepository.save(chatMapper.toAssistantMessage(chatRoom, assistantAnswer));
 
 			return new ChatSendResDto(
@@ -104,12 +115,20 @@ public class ChatService {
 				.ifPresent(chatMessageRepository::deleteAllByChatRoom);
 	}
 
-	private String generateAssistantAnswer(List<ChatMessage> messages, String currentContent, MultipartFile image) {
+	private String generateAssistantAnswer(
+			List<ChatMessage> messages,
+			Long currentUserMessageId,
+			String currentContent,
+			MultipartFile image,
+			MimeType imageMimeType
+	) {
 		List<Message> promptMessages = new ArrayList<>();
 		promptMessages.add(new SystemMessage(SYSTEM_PROMPT));
 
-		for (int index = 0; index < messages.size() - 1; index++) {
-			ChatMessage message = messages.get(index);
+		for (ChatMessage message : messages) {
+			if (message.getChatMessageId().equals(currentUserMessageId)) {
+				continue;
+			}
 			if (message.getSenderType() == MessageSenderType.USER) {
 				promptMessages.add(new UserMessage(message.getContent()));
 			} else {
@@ -117,7 +136,7 @@ public class ChatService {
 			}
 		}
 
-		promptMessages.add(buildCurrentUserMessage(currentContent, image));
+		promptMessages.add(buildCurrentUserMessage(currentContent, image, imageMimeType));
 
 		String responseText = chatModel.call(
 						new Prompt(promptMessages, OpenAiChatOptions.builder().model(openAiModel).build()))
@@ -132,7 +151,7 @@ public class ChatService {
 		return responseText.trim();
 	}
 
-	private UserMessage buildCurrentUserMessage(String content, MultipartFile image) {
+	private UserMessage buildCurrentUserMessage(String content, MultipartFile image, MimeType imageMimeType) {
 		String promptText = hasText(content)
 				? content
 				: "첨부한 이미지를 보고 세탁 상담을 해줘.";
@@ -143,7 +162,7 @@ public class ChatService {
 
 		return UserMessage.builder()
 				.text(promptText)
-				.media(new Media(resolveMimeType(image), image.getResource()))
+				.media(new Media(imageMimeType, image.getResource()))
 				.build();
 	}
 
@@ -161,29 +180,20 @@ public class ChatService {
 		}
 	}
 
-	private void validateInput(String content, MultipartFile image) {
+	private MimeType validateInput(String content, MultipartFile image) {
 		if (!hasText(content) && (image == null || image.isEmpty())) {
 			throw new GeneralException(ChatErrorCode.CHAT_INPUT_REQUIRED);
 		}
 
 		if (image == null || image.isEmpty()) {
-			return;
+			return null;
 		}
 
-		String contentType = image.getContentType();
 		try {
-			MimeType mimeType = MimeType.valueOf(contentType == null ? "" : contentType);
-			if (!"image".equalsIgnoreCase(mimeType.getType())) {
-				throw new GeneralException(ChatErrorCode.INVALID_IMAGE_TYPE);
-			}
+			return ImageFileValidator.detectSupportedMimeType(image);
 		} catch (IllegalArgumentException exception) {
 			throw new GeneralException(ChatErrorCode.INVALID_IMAGE_TYPE);
 		}
-	}
-
-	private MimeType resolveMimeType(MultipartFile image) {
-		String contentType = image.getContentType();
-		return contentType == null ? MimeTypeUtils.IMAGE_JPEG : MimeType.valueOf(contentType);
 	}
 
 	private String normalizeContent(String content) {
