@@ -4,6 +4,8 @@ import com.posong.ai_laundry.domain.clothes.dto.ClothesAnalysisAiResDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesAnalysisResDto;
 import com.posong.ai_laundry.domain.clothes.exception.ClothesErrorCode;
 import com.posong.ai_laundry.global.error.exception.GeneralException;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
@@ -42,6 +44,7 @@ public class ClothesAnalysisService {
 			""";
 
 	private final ChatModel chatModel;
+	private final MeterRegistry meterRegistry;
 
 	@Value("${spring.ai.openai.chat.options.model:gpt-4o-mini}")
 	private String openAiModel;
@@ -58,21 +61,34 @@ public class ClothesAnalysisService {
 				.media(new Media(resolveMimeType(image), image.getResource()))
 				.build();
 
+		Timer.Sample openAiTimer = Timer.start(meterRegistry);
 		try {
 			String responseText = chatModel.call(
 							new Prompt(userMessage, OpenAiChatOptions.builder().model(openAiModel).build()))
 					.getResult()
 					.getOutput()
 					.getText();
+			recordOpenAiTimer(openAiTimer, "success", "none");
 
 			ClothesAnalysisAiResDto result = outputConverter.convert(responseText);
 			validateResult(result);
 			return ClothesAnalysisResDto.from(result);
 		} catch (GeneralException exception) {
+			recordOpenAiTimer(openAiTimer, "failure", exception.getClass().getSimpleName());
 			throw exception;
 		} catch (Exception exception) {
+			recordOpenAiTimer(openAiTimer, "failure", exception.getClass().getSimpleName());
 			throw new GeneralException(ClothesErrorCode.CLOTHES_ANALYSIS_FAILED);
 		}
+	}
+
+	private void recordOpenAiTimer(Timer.Sample sample, String outcome, String exception) {
+		sample.stop(Timer.builder("clothes.analysis.openai")
+				.description("OpenAI latency for clothes image analysis")
+				.tag("model", openAiModel)
+				.tag("outcome", outcome)
+				.tag("exception", exception)
+				.register(meterRegistry));
 	}
 
 	private void validateImage(MultipartFile image) {
