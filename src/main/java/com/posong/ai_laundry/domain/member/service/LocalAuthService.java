@@ -9,7 +9,6 @@ import com.posong.ai_laundry.domain.member.dto.TokenReissueReqDto;
 import com.posong.ai_laundry.domain.member.dto.TokenReissueResDto;
 import com.posong.ai_laundry.domain.member.entity.LocalAccount;
 import com.posong.ai_laundry.domain.member.entity.Member;
-import com.posong.ai_laundry.domain.member.entity.RefreshToken;
 import com.posong.ai_laundry.domain.member.exception.MemberErrorCode;
 import com.posong.ai_laundry.domain.member.mapper.MemberMapper;
 import com.posong.ai_laundry.domain.member.repository.LocalAccountRepository;
@@ -25,8 +24,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -39,6 +36,7 @@ public class LocalAuthService {
 	private final PasswordEncoder passwordEncoder;
 	private final JwtTokenProvider jwtTokenProvider;
 	private final RefreshTokenHashProvider refreshTokenHashProvider;
+	private final AuthTokenService authTokenService;
 
 	@Transactional
 	public LocalSignUpResDto signUp(LocalSignUpReqDto request) {
@@ -57,20 +55,17 @@ public class LocalAuthService {
 		LocalAccount localAccount = localAccountRepository.findByLoginId(request.loginId())
 				.orElseThrow(() -> new GeneralException(MemberErrorCode.INVALID_LOGIN));
 
-		// 저장된 비밀번호와 입력값을 비교한다.
 		if (!passwordEncoder.matches(request.password(), localAccount.getPassword())) {
 			throw new GeneralException(MemberErrorCode.INVALID_LOGIN);
 		}
 
-		TokenPair tokenPair = jwtTokenProvider.generateTokenPair(localAccount.getMember().getMemberId());
-		saveRefreshToken(localAccount.getMember(), tokenPair.refreshToken(), tokenPair.refreshTokenExpiresAt());
+		TokenPair tokenPair = authTokenService.issueTokenPair(localAccount.getMember());
 
 		return memberMapper.toLocalLoginResDto(tokenPair);
 	}
 
 	@Transactional
 	public TokenReissueResDto reissue(TokenReissueReqDto request) {
-		// 만료되었거나 타입이 다른 토큰이면 재발급하지 않는다.
 		if (jwtTokenProvider.isExpired(request.refreshToken())) {
 			throw new GeneralException(AuthErrorCode.EXPIRED_REFRESH_TOKEN);
 		}
@@ -83,8 +78,7 @@ public class LocalAuthService {
 				.orElseThrow(() -> new GeneralException(AuthErrorCode.INVALID_REFRESH_TOKEN));
 		String currentRefreshTokenHash = refreshTokenHashProvider.hash(request.refreshToken());
 
-		// 현재 저장된 refresh token과 일치할 때만 새 토큰으로 교체한다.
-		TokenPair tokenPair = jwtTokenProvider.generateTokenPair(memberId);
+		TokenPair tokenPair = authTokenService.generateTokenPair(memberId);
 		int updatedCount = refreshTokenRepository.rotateToken(
 				memberId,
 				currentRefreshTokenHash,
@@ -118,22 +112,8 @@ public class LocalAuthService {
 		if (memberRepository.existsByEmail(request.email())) {
 			throw new GeneralException(MemberErrorCode.DUPLICATE_EMAIL);
 		}
-	}
-
-	private void saveRefreshToken(Member member, String token, LocalDateTime expiresAt) {
-		String refreshTokenHash = refreshTokenHashProvider.hash(token);
-
-		// 한 회원당 refresh token 하나만 유지한다.
-		refreshTokenRepository.findByMember_MemberId(member.getMemberId())
-				.ifPresentOrElse(
-						refreshToken -> refreshToken.updateToken(refreshTokenHash, expiresAt),
-						() -> refreshTokenRepository.save(
-								RefreshToken.builder()
-										.member(member)
-										.token(refreshTokenHash)
-										.expiresAt(expiresAt)
-										.build()
-						)
-				);
+		if (memberRepository.existsByNickname(request.loginId())) {
+			throw new GeneralException(MemberErrorCode.DUPLICATE_NICKNAME);
+		}
 	}
 }
