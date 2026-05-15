@@ -4,6 +4,7 @@ import com.posong.ai_laundry.domain.clothes.dto.ClothesAnalysisAiResDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesAnalysisResDto;
 import com.posong.ai_laundry.domain.clothes.exception.ClothesErrorCode;
 import com.posong.ai_laundry.global.error.exception.GeneralException;
+import com.posong.ai_laundry.global.file.ImageFileValidator;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +17,6 @@ import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.MimeType;
-import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
@@ -50,7 +50,7 @@ public class ClothesAnalysisService {
 	private String openAiModel;
 
 	public ClothesAnalysisResDto analyze(MultipartFile image) {
-		validateImage(image);
+		MimeType imageMimeType = validateAndResolveImage(image);
 
 		BeanOutputConverter<ClothesAnalysisAiResDto> outputConverter =
 				new BeanOutputConverter<>(ClothesAnalysisAiResDto.class);
@@ -58,7 +58,7 @@ public class ClothesAnalysisService {
 		String promptText = ANALYSIS_PROMPT.formatted(outputConverter.getFormat());
 		UserMessage userMessage = UserMessage.builder()
 				.text(promptText)
-				.media(new Media(resolveMimeType(image), image.getResource()))
+				.media(new Media(imageMimeType, image.getResource()))
 				.build();
 
 		Timer.Sample openAiTimer = Timer.start(meterRegistry);
@@ -68,10 +68,10 @@ public class ClothesAnalysisService {
 					.getResult()
 					.getOutput()
 					.getText();
-			recordOpenAiTimer(openAiTimer, "success", "none");
 
 			ClothesAnalysisAiResDto result = outputConverter.convert(responseText);
 			validateResult(result);
+			recordOpenAiTimer(openAiTimer, "success", "none");
 			return ClothesAnalysisResDto.from(result);
 		} catch (GeneralException exception) {
 			recordOpenAiTimer(openAiTimer, "failure", exception.getClass().getSimpleName());
@@ -91,25 +91,16 @@ public class ClothesAnalysisService {
 				.register(meterRegistry));
 	}
 
-	private void validateImage(MultipartFile image) {
+	private MimeType validateAndResolveImage(MultipartFile image) {
 		if (image == null || image.isEmpty()) {
 			throw new GeneralException(ClothesErrorCode.IMAGE_REQUIRED);
 		}
 
-		String contentType = image.getContentType();
 		try {
-			MimeType mimeType = MimeType.valueOf(contentType == null ? "" : contentType);
-			if (!"image".equalsIgnoreCase(mimeType.getType())) {
-				throw new GeneralException(ClothesErrorCode.INVALID_IMAGE_TYPE);
-			}
+			return ImageFileValidator.detectSupportedMimeType(image);
 		} catch (IllegalArgumentException exception) {
 			throw new GeneralException(ClothesErrorCode.INVALID_IMAGE_TYPE);
 		}
-	}
-
-	private MimeType resolveMimeType(MultipartFile image) {
-		String contentType = image.getContentType();
-		return contentType == null ? MimeTypeUtils.IMAGE_JPEG : MimeType.valueOf(contentType);
 	}
 
 	private void validateResult(ClothesAnalysisAiResDto result) {
