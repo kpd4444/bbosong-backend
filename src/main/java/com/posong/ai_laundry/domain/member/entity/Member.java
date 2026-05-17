@@ -27,10 +27,10 @@ public class Member {
 	@Column(name = "member_id")
 	private Long memberId;
 
-	@Column(nullable = false, unique = true, length = 100)
+	@Column(length = 100)
 	private String email;
 
-	@Column(unique = true, length = 50)
+	@Column(unique = true, length = 50 )
 	private String nickname;
 
 	private LocalDate birth;

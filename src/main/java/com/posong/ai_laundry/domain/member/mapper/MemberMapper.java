@@ -13,10 +13,13 @@ import org.springframework.stereotype.Component;
 @Component
 public class MemberMapper {
 
+	private static final int MAX_NICKNAME_LENGTH = 50;
+
 	// 회원가입 요청값으로 Member 엔티티를 만든다.
 	public Member toMember(LocalSignUpReqDto request) {
 		return Member.builder()
 				.email(request.email())
+				.nickname(toNickname(request.loginId()))
 				.build();
 	}
 
@@ -64,5 +67,12 @@ public class MemberMapper {
 				member.getNickname(),
 				member.getBirth()
 		);
+	}
+
+	private String toNickname(String loginId) {
+		if (loginId.length() <= MAX_NICKNAME_LENGTH) {
+			return loginId;
+		}
+		return loginId.substring(0, MAX_NICKNAME_LENGTH);
 	}
 }
