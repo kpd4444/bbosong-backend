@@ -3,6 +3,7 @@ package com.posong.ai_laundry.domain.clothes.controller;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesDetailResDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesFavoriteReqDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesFavoriteResDto;
+import com.posong.ai_laundry.domain.clothes.dto.ClothesHomeResDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesSaveReqDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesSaveResDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesSummaryResDto;
@@ -119,5 +120,14 @@ public class ClothesController {
 	@GetMapping("/favorites")
 	public ApiResponse<List<ClothesSummaryResDto>> getFavorites(@AuthenticationPrincipal Long memberId) {
 		return ApiResponse.success(clothesService.getFavorites(memberId));
+	}
+
+	@Operation(
+			summary = "홈 옷장 요약 조회",
+			description = "로그인한 회원의 최근 등록 의류 5개와 즐겨찾기 의류 5개를 함께 조회합니다."
+	)
+	@GetMapping("/home")
+	public ApiResponse<ClothesHomeResDto> getHomeClothes(@AuthenticationPrincipal Long memberId) {
+		return ApiResponse.success(clothesService.getHomeClothes(memberId));
 	}
 }

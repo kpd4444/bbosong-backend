@@ -4,6 +4,7 @@ import com.posong.ai_laundry.domain.clothes.constant.ClothesCategory;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesDetailResDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesFavoriteReqDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesFavoriteResDto;
+import com.posong.ai_laundry.domain.clothes.dto.ClothesHomeResDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesSaveReqDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesSaveResDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesSummaryResDto;
@@ -109,6 +110,22 @@ public class ClothesService {
 				.stream()
 				.map(clothesMapper::toClothesSummaryResDto)
 				.toList();
+	}
+
+	public ClothesHomeResDto getHomeClothes(Long memberId) {
+		validateMember(memberId);
+
+		List<ClothesSummaryResDto> recentClothes = clothesRepository.findTop5ByMember_MemberIdOrderByCreatedAtDesc(memberId)
+				.stream()
+				.map(clothesMapper::toClothesSummaryResDto)
+				.toList();
+		List<ClothesSummaryResDto> favoriteClothes = clothesRepository
+				.findTop5ByMember_MemberIdAndIsFavoriteTrueOrderByCreatedAtDesc(memberId)
+				.stream()
+				.map(clothesMapper::toClothesSummaryResDto)
+				.toList();
+
+		return new ClothesHomeResDto(recentClothes, favoriteClothes);
 	}
 
 	private Clothes getOwnedClothes(Long memberId, Long clothesId) {
