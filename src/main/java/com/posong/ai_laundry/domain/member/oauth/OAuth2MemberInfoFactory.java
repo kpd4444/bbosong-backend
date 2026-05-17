@@ -29,10 +29,9 @@ public final class OAuth2MemberInfoFactory {
 		);
 	}
 
-	@SuppressWarnings("unchecked")
 	private static OAuth2MemberInfo fromKakao(Map<String, Object> attributes) {
-		Map<String, Object> kakaoAccount = (Map<String, Object>) attributes.getOrDefault("kakao_account", Map.of());
-		Map<String, Object> profile = (Map<String, Object>) kakaoAccount.getOrDefault("profile", Map.of());
+		Map<String, Object> kakaoAccount = asMap(attributes.get("kakao_account"));
+		Map<String, Object> profile = asMap(kakaoAccount.get("profile"));
 
 		return new OAuth2MemberInfo(
 				SocialProvider.KAKAO,
@@ -54,5 +53,18 @@ public final class OAuth2MemberInfoFactory {
 
 	private static String stringValue(Object value) {
 		return value == null ? null : String.valueOf(value);
+	}
+
+	@SuppressWarnings("unchecked")
+	private static Map<String, Object> asMap(Object value) {
+		if (value == null) {
+			return Map.of();
+		}
+		if (value instanceof Map<?, ?> map) {
+			return (Map<String, Object>) map;
+		}
+		throw new OAuth2AuthenticationException(
+				new OAuth2Error("invalid_user_info", "Invalid OAuth2 user attribute structure", null)
+		);
 	}
 }

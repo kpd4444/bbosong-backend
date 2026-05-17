@@ -9,6 +9,7 @@ import com.posong.ai_laundry.domain.member.dto.TokenReissueReqDto;
 import com.posong.ai_laundry.domain.member.dto.TokenReissueResDto;
 import com.posong.ai_laundry.domain.member.constant.SocialProvider;
 import com.posong.ai_laundry.domain.member.entity.Member;
+import com.posong.ai_laundry.domain.member.exception.MemberErrorCode;
 import com.posong.ai_laundry.domain.member.oauth.OAuth2MemberInfo;
 import com.posong.ai_laundry.domain.member.repository.LocalAccountRepository;
 import com.posong.ai_laundry.domain.member.repository.SocialAccountRepository;
@@ -107,6 +108,7 @@ class LocalAuthServiceTest {
 
 		assertThatThrownBy(() -> localAuthService.login(
 				new LocalLoginReqDto(socialNickname, "password1234")
-		)).isInstanceOf(GeneralException.class);
+		)).isInstanceOfSatisfying(GeneralException.class, exception ->
+				assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.INVALID_LOGIN));
 	}
 }

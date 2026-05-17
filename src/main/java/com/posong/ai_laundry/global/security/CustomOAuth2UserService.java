@@ -28,12 +28,22 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 	@Override
 	public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
 		OAuth2User oAuth2User = delegate.loadUser(userRequest);
-		String registrationId = userRequest.getClientRegistration().getRegistrationId();
-		OAuth2MemberInfo memberInfo = OAuth2MemberInfoFactory.from(registrationId, oAuth2User.getAttributes());
-		Member member = socialAuthService.findOrCreateMember(memberInfo);
+		Member member = socialAuthService.findOrCreateMember(extractMemberInfo(userRequest, oAuth2User));
+		return buildAuthenticatedUser(userRequest, oAuth2User, member.getMemberId());
+	}
 
+	private OAuth2MemberInfo extractMemberInfo(OAuth2UserRequest userRequest, OAuth2User oAuth2User) {
+		String registrationId = userRequest.getClientRegistration().getRegistrationId();
+		return OAuth2MemberInfoFactory.from(registrationId, oAuth2User.getAttributes());
+	}
+
+	private OAuth2User buildAuthenticatedUser(
+			OAuth2UserRequest userRequest,
+			OAuth2User oAuth2User,
+			Long memberId
+	) {
 		Map<String, Object> attributes = new HashMap<>(oAuth2User.getAttributes());
-		attributes.put("memberId", member.getMemberId());
+		attributes.put("memberId", memberId);
 
 		String userNameAttributeName = userRequest
 				.getClientRegistration()

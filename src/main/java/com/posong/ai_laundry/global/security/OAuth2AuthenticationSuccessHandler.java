@@ -20,6 +20,7 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
 
 	private final OAuth2RedirectProperties oAuth2RedirectProperties;
 	private final com.posong.ai_laundry.domain.member.service.AuthTokenService authTokenService;
+	private final OAuth2LoginCodeService oAuth2LoginCodeService;
 
 	@Override
 	public void onAuthenticationSuccess(
@@ -27,22 +28,36 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
 			HttpServletResponse response,
 			Authentication authentication
 	) throws IOException, ServletException {
-		OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
-		Long memberId = oAuth2User.getAttribute("memberId");
-		TokenPair tokenPair = authTokenService.issueTokenPair(memberId);
+		Long memberId = extractMemberId(authentication);
+		String code = issueLoginCode(memberId);
 
-		String redirectUri = UriComponentsBuilder
+		invalidateSessionIfPresent(request);
+		response.sendRedirect(buildRedirectUri(code));
+	}
+
+	private Long extractMemberId(Authentication authentication) {
+		OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
+		return oAuth2User.getAttribute("memberId");
+	}
+
+	private String issueLoginCode(Long memberId) {
+		TokenPair tokenPair = authTokenService.issueTokenPair(memberId);
+		return oAuth2LoginCodeService.issueCode(tokenPair);
+	}
+
+	private String buildRedirectUri(String code) {
+		return UriComponentsBuilder
 				.fromUriString(oAuth2RedirectProperties.successRedirectUri())
-				.queryParam("grantType", tokenPair.grantType())
-				.queryParam("accessToken", tokenPair.accessToken())
-				.queryParam("accessTokenExpiresAt", tokenPair.accessTokenExpiresAt())
-				.queryParam("refreshToken", tokenPair.refreshToken())
-				.queryParam("refreshTokenExpiresAt", tokenPair.refreshTokenExpiresAt())
+				.queryParam("code", code)
 				.build()
 				.encode(StandardCharsets.UTF_8)
 				.toUriString();
+	}
 
-		response.sendRedirect(redirectUri);
+	private void invalidateSessionIfPresent(HttpServletRequest request) {
+		if (request.getSession(false) != null) {
+			request.getSession(false).invalidate();
+		}
 	}
 
 	@ConfigurationProperties(prefix = "app.oauth2")

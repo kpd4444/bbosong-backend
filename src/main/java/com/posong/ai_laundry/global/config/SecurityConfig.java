@@ -51,6 +51,7 @@ public class SecurityConfig {
 								"/api/auth/signup/local",
 								"/api/auth/login/local",
 								"/api/auth/reissue",
+								"/api/auth/oauth/exchange",
 								"/oauth2/authorization/**",
 								"/login/oauth2/code/**"
 						).permitAll()
