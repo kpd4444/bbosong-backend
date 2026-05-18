@@ -79,7 +79,7 @@ class StoreFavoriteServiceTest {
 		StoreFavorite savedFavorite = mock(StoreFavorite.class);
 		when(savedFavorite.getStore()).thenReturn(savedStore);
 		when(savedFavorite.getCreatedAt()).thenReturn(LocalDateTime.of(2026, 5, 18, 22, 0));
-		when(storeFavoriteRepository.save(any(StoreFavorite.class))).thenReturn(savedFavorite);
+		when(storeFavoriteRepository.saveAndFlush(any(StoreFavorite.class))).thenReturn(savedFavorite);
 
 		StoreFavoriteResDto result = storeFavoriteService.saveFavorite(memberId, request);
 
