@@ -43,8 +43,13 @@ public class StoreFavoriteService {
 				.map(existingStore -> syncStore(existingStore, request))
 				.orElseGet(() -> createStoreSafely(request));
 
-		StoreFavorite savedFavorite = storeFavoriteRepository.save(storeFavoriteMapper.toStoreFavorite(member, store));
-		return storeFavoriteMapper.toStoreFavoriteResDto(savedFavorite);
+		try {
+			StoreFavorite savedFavorite = storeFavoriteRepository
+					.saveAndFlush(storeFavoriteMapper.toStoreFavorite(member, store));
+			return storeFavoriteMapper.toStoreFavoriteResDto(savedFavorite);
+		} catch (DataIntegrityViolationException exception) {
+			throw new GeneralException(StoreErrorCode.STORE_FAVORITE_ALREADY_EXISTS);
+		}
 	}
 
 	public List<StoreFavoriteResDto> getFavorites(Long memberId) {
