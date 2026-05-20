@@ -122,34 +122,46 @@ public class WeatherRecommendationService {
 	}
 
 	private boolean hasHighRainChance(WeatherForecastSnapshot snapshot) {
-		return valueOrZero(snapshot.rainProbability()) >= HIGH_RAIN_PROBABILITY;
+		return isGreaterThanOrEqual(snapshot.rainProbability(), HIGH_RAIN_PROBABILITY);
 	}
 
 	private boolean hasModerateRainChance(WeatherForecastSnapshot snapshot) {
-		return valueOrZero(snapshot.rainProbability()) >= MODERATE_RAIN_PROBABILITY;
+		return isGreaterThanOrEqual(snapshot.rainProbability(), MODERATE_RAIN_PROBABILITY);
 	}
 
 	private boolean isVeryHumid(WeatherForecastSnapshot snapshot) {
-		return valueOrZero(snapshot.humidity()) >= VERY_HUMID;
+		return isGreaterThanOrEqual(snapshot.humidity(), VERY_HUMID);
 	}
 
 	private boolean isHumid(WeatherForecastSnapshot snapshot) {
-		return valueOrZero(snapshot.humidity()) >= HUMID;
+		return isGreaterThanOrEqual(snapshot.humidity(), HUMID);
 	}
 
 	private boolean isCold(WeatherForecastSnapshot snapshot) {
-		return valueOrZero(snapshot.temperature()) <= COLD_TEMPERATURE;
+		return isLessThanOrEqual(snapshot.temperature(), COLD_TEMPERATURE);
 	}
 
 	private boolean isGoodForOutdoorDry(WeatherForecastSnapshot snapshot) {
 		return "맑음".equals(snapshot.skyStatus())
 				&& "없음".equals(snapshot.precipitationType())
-				&& valueOrZero(snapshot.rainProbability()) < MODERATE_RAIN_PROBABILITY
-				&& valueOrZero(snapshot.humidity()) < GOOD_HUMIDITY
-				&& valueOrZero(snapshot.temperature()) > COLD_TEMPERATURE;
+				&& isLessThan(snapshot.rainProbability(), MODERATE_RAIN_PROBABILITY)
+				&& isLessThan(snapshot.humidity(), GOOD_HUMIDITY)
+				&& isGreaterThan(snapshot.temperature(), COLD_TEMPERATURE);
 	}
 
-	private int valueOrZero(Integer value) {
-		return value == null ? 0 : value;
+	private boolean isGreaterThanOrEqual(Integer value, int threshold) {
+		return value != null && value >= threshold;
+	}
+
+	private boolean isGreaterThan(Integer value, int threshold) {
+		return value != null && value > threshold;
+	}
+
+	private boolean isLessThan(Integer value, int threshold) {
+		return value != null && value < threshold;
+	}
+
+	private boolean isLessThanOrEqual(Integer value, int threshold) {
+		return value != null && value <= threshold;
 	}
 }

@@ -88,6 +88,24 @@ class WeatherLaundryServiceTest {
 		assertThat(coordinate.ny()).isEqualTo(127);
 	}
 
+	@Test
+	void recommendDoesNotTreatMissingWeatherValueAsZero() {
+		WeatherForecastSnapshot snapshot = new WeatherForecastSnapshot(
+				"20260520",
+				"1100",
+				"20260520",
+				"1200",
+				null,
+				null,
+				null,
+				"맑음",
+				"없음"
+		);
+
+		assertThat(weatherRecommendationService.recommend(snapshot)).extracting("title")
+				.containsExactly("일반 세탁 추천", "건조 상태 확인");
+	}
+
 	private KmaForecastItem item(String category, String value) {
 		return new KmaForecastItem(
 				"20260520",

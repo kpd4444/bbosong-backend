@@ -68,7 +68,7 @@ public class KmaForecastClient {
 		}
 
 		JsonNode items = responseNode.path("body").path("items").path("item");
-		if (!items.isArray()) {
+		if (!items.isArray() || items.isEmpty()) {
 			throw new GeneralException(WeatherErrorCode.WEATHER_FORECAST_NOT_FOUND);
 		}
 
