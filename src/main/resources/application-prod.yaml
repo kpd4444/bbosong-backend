@@ -7,9 +7,35 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     open-in-view: false
     properties:
       hibernate:
         format_sql: false
         show_sql: false
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - profile
+              - email
+            redirect-uri: ${OAUTH2_REDIRECT_BASE_URL:https://api.bbosongi.com}/login/oauth2/code/{registrationId}
+          kakao:
+            client-id: ${KAKAO_CLIENT_ID}
+            client-secret: ${KAKAO_CLIENT_SECRET}
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
+            redirect-uri: ${OAUTH2_REDIRECT_BASE_URL:https://api.bbosongi.com}/login/oauth2/code/{registrationId}
+            scope:
+              - profile_nickname
+              - account_email
+            client-name: Kakao
+
+app:
+  oauth2:
+    success-redirect-uri: ${OAUTH2_SUCCESS_REDIRECT_URI:https://bbosongi.com/oauth/success}

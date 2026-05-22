@@ -3,6 +3,21 @@ spring:
     name: ai-laundry
   profiles:
     default: local
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY}
+      chat:
+        options:
+          model: ${OPENAI_MODEL:gpt-4o-mini}
+  security:
+    oauth2:
+      client:
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
 
 springdoc:
   swagger-ui:
@@ -10,3 +25,13 @@ springdoc:
     display-request-duration: true
     groups-order: desc
     operations-sorter: method
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-token-expiration-seconds: ${JWT_ACCESS_TOKEN_EXPIRATION_SECONDS:1800}
+  refresh-token-expiration-seconds: ${JWT_REFRESH_TOKEN_EXPIRATION_SECONDS:1209600}
+
+weather:
+  kma:
+    service-key: ${KMA_SERVICE_KEY}
+    endpoint: https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0
