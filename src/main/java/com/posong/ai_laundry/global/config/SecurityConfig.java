@@ -49,6 +49,7 @@ public class SecurityConfig {
 								"/v3/api-docs/**",
 								"/v3/api-docs.yaml",
 								"/api/auth/signup/local",
+								"/api/auth/signup/local/check-login-id",
 								"/api/auth/login/local",
 								"/api/auth/reissue",
 								"/api/auth/oauth/exchange",

@@ -25,4 +25,6 @@ public interface ClothesRepository extends JpaRepository<Clothes, Long> {
 	List<Clothes> findTop5ByMember_MemberIdAndIsFavoriteTrueOrderByCreatedAtDesc(Long memberId);
 
 	Optional<Clothes> findByClothesIdAndMember_MemberId(Long clothesId, Long memberId);
+
+	void deleteByMember_MemberId(Long memberId);
 }

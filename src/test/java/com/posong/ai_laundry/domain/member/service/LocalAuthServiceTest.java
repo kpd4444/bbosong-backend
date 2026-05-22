@@ -1,6 +1,7 @@
 package com.posong.ai_laundry.domain.member.service;
 
 import com.posong.ai_laundry.domain.member.dto.LocalLoginReqDto;
+import com.posong.ai_laundry.domain.member.dto.LocalLoginIdCheckResDto;
 import com.posong.ai_laundry.domain.member.dto.LocalLoginResDto;
 import com.posong.ai_laundry.domain.member.dto.LocalSignUpReqDto;
 import com.posong.ai_laundry.domain.member.dto.LocalSignUpResDto;
@@ -12,6 +13,8 @@ import com.posong.ai_laundry.domain.member.entity.Member;
 import com.posong.ai_laundry.domain.member.exception.MemberErrorCode;
 import com.posong.ai_laundry.domain.member.oauth.OAuth2MemberInfo;
 import com.posong.ai_laundry.domain.member.repository.LocalAccountRepository;
+import com.posong.ai_laundry.domain.member.repository.MemberRepository;
+import com.posong.ai_laundry.domain.member.repository.RefreshTokenRepository;
 import com.posong.ai_laundry.domain.member.repository.SocialAccountRepository;
 import com.posong.ai_laundry.global.error.exception.GeneralException;
 import com.posong.ai_laundry.global.security.TokenPair;
@@ -40,6 +43,12 @@ class LocalAuthServiceTest {
 
 	@Autowired
 	private LocalAccountRepository localAccountRepository;
+
+	@Autowired
+	private MemberRepository memberRepository;
+
+	@Autowired
+	private RefreshTokenRepository refreshTokenRepository;
 
 	@Autowired
 	private SocialAccountRepository socialAccountRepository;
@@ -110,5 +119,60 @@ class LocalAuthServiceTest {
 				new LocalLoginReqDto(socialNickname, "password1234")
 		)).isInstanceOfSatisfying(GeneralException.class, exception ->
 				assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.INVALID_LOGIN));
+	}
+
+	@Test
+	void checkLoginIdReturnsAvailability() {
+		String uniqueSuffix = UUID.randomUUID().toString().substring(0, 8);
+		String loginId = "bbosong-check-" + uniqueSuffix;
+
+		LocalLoginIdCheckResDto availableResponse = localAuthService.checkLoginId(loginId);
+
+		assertThat(availableResponse.loginId()).isEqualTo(loginId);
+		assertThat(availableResponse.available()).isTrue();
+		assertThat(availableResponse.duplicated()).isFalse();
+
+		localAuthService.signUp(
+				new LocalSignUpReqDto(
+						loginId,
+						"password1234",
+						"bbosong-check-" + uniqueSuffix + "@example.com"
+				)
+		);
+
+		LocalLoginIdCheckResDto duplicatedResponse = localAuthService.checkLoginId(loginId);
+
+		assertThat(duplicatedResponse.loginId()).isEqualTo(loginId);
+		assertThat(duplicatedResponse.available()).isFalse();
+		assertThat(duplicatedResponse.duplicated()).isTrue();
+	}
+
+	@Test
+	void withdrawDeletesLocalMemberAndTokens() {
+		String uniqueSuffix = UUID.randomUUID().toString().substring(0, 8);
+		String loginId = "bbosong-withdraw-" + uniqueSuffix;
+		String email = "bbosong-withdraw-" + uniqueSuffix + "@example.com";
+
+		LocalSignUpResDto signUpResponse = localAuthService.signUp(
+				new LocalSignUpReqDto(
+						loginId,
+						"password1234",
+						email
+				)
+		);
+		localAuthService.login(new LocalLoginReqDto(loginId, "password1234"));
+
+		assertThat(memberRepository.findById(signUpResponse.memberId())).isPresent();
+		assertThat(localAccountRepository.findByLoginId(loginId)).isPresent();
+		assertThat(refreshTokenRepository.findByMember_MemberId(signUpResponse.memberId())).isPresent();
+
+		localAuthService.withdraw(signUpResponse.memberId());
+
+		assertThat(memberRepository.findById(signUpResponse.memberId())).isEmpty();
+		assertThat(localAccountRepository.findByLoginId(loginId)).isEmpty();
+		assertThat(refreshTokenRepository.findByMember_MemberId(signUpResponse.memberId())).isEmpty();
+		assertThatThrownBy(() -> localAuthService.login(new LocalLoginReqDto(loginId, "password1234")))
+				.isInstanceOfSatisfying(GeneralException.class, exception ->
+						assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.INVALID_LOGIN));
 	}
 }

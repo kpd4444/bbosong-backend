@@ -13,4 +13,6 @@ public interface StoreFavoriteRepository extends JpaRepository<StoreFavorite, Lo
 	Optional<StoreFavorite> findByMember_MemberIdAndStore_StoreId(Long memberId, Long storeId);
 
 	List<StoreFavorite> findAllByMember_MemberIdOrderByCreatedAtDesc(Long memberId);
+
+	void deleteByMember_MemberId(Long memberId);
 }
