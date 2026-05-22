@@ -1,5 +1,10 @@
 package com.posong.ai_laundry.domain.member.service;
 
+import com.posong.ai_laundry.domain.chat.entity.ChatRoom;
+import com.posong.ai_laundry.domain.chat.repository.ChatMessageRepository;
+import com.posong.ai_laundry.domain.chat.repository.ChatRoomRepository;
+import com.posong.ai_laundry.domain.clothes.repository.ClothesRepository;
+import com.posong.ai_laundry.domain.member.dto.LocalLoginIdCheckResDto;
 import com.posong.ai_laundry.domain.member.dto.LocalLoginReqDto;
 import com.posong.ai_laundry.domain.member.dto.LocalLoginResDto;
 import com.posong.ai_laundry.domain.member.dto.LocalSignUpReqDto;
@@ -14,6 +19,8 @@ import com.posong.ai_laundry.domain.member.mapper.MemberMapper;
 import com.posong.ai_laundry.domain.member.repository.LocalAccountRepository;
 import com.posong.ai_laundry.domain.member.repository.MemberRepository;
 import com.posong.ai_laundry.domain.member.repository.RefreshTokenRepository;
+import com.posong.ai_laundry.domain.member.repository.SocialAccountRepository;
+import com.posong.ai_laundry.domain.store.repository.StoreFavoriteRepository;
 import com.posong.ai_laundry.global.error.exception.GeneralException;
 import com.posong.ai_laundry.global.security.JwtTokenProvider;
 import com.posong.ai_laundry.global.security.RefreshTokenHashProvider;
@@ -32,6 +39,11 @@ public class LocalAuthService {
 	private final MemberRepository memberRepository;
 	private final LocalAccountRepository localAccountRepository;
 	private final RefreshTokenRepository refreshTokenRepository;
+	private final SocialAccountRepository socialAccountRepository;
+	private final ChatRoomRepository chatRoomRepository;
+	private final ChatMessageRepository chatMessageRepository;
+	private final ClothesRepository clothesRepository;
+	private final StoreFavoriteRepository storeFavoriteRepository;
 	private final MemberMapper memberMapper;
 	private final PasswordEncoder passwordEncoder;
 	private final JwtTokenProvider jwtTokenProvider;
@@ -48,6 +60,11 @@ public class LocalAuthService {
 		);
 
 		return memberMapper.toLocalSignUpResDto(member, localAccount);
+	}
+
+	public LocalLoginIdCheckResDto checkLoginId(String loginId) {
+		boolean duplicated = localAccountRepository.existsByLoginId(loginId);
+		return LocalLoginIdCheckResDto.of(loginId, duplicated);
 	}
 
 	@Transactional
@@ -103,6 +120,25 @@ public class LocalAuthService {
 				.orElseThrow(() -> new GeneralException(MemberErrorCode.MEMBER_NOT_FOUND));
 
 		return memberMapper.toMemberProfileResDto(member);
+	}
+
+	@Transactional
+	public void withdraw(Long memberId) {
+		Member member = memberRepository.findById(memberId)
+				.orElseThrow(() -> new GeneralException(MemberErrorCode.MEMBER_NOT_FOUND));
+
+		refreshTokenRepository.deleteByMember_MemberId(memberId);
+		localAccountRepository.deleteByMember_MemberId(memberId);
+		socialAccountRepository.deleteByMember_MemberId(memberId);
+		chatRoomRepository.findByMember_MemberId(memberId).ifPresent(this::deleteChatRoom);
+		clothesRepository.deleteByMember_MemberId(memberId);
+		storeFavoriteRepository.deleteByMember_MemberId(memberId);
+		memberRepository.delete(member);
+	}
+
+	private void deleteChatRoom(ChatRoom chatRoom) {
+		chatMessageRepository.deleteAllByChatRoom(chatRoom);
+		chatRoomRepository.delete(chatRoom);
 	}
 
 	private void validateDuplicateMember(LocalSignUpReqDto request) {
