@@ -12,7 +12,9 @@ import com.posong.ai_laundry.domain.chat.repository.ChatRoomRepository;
 import com.posong.ai_laundry.domain.member.entity.Member;
 import com.posong.ai_laundry.domain.member.exception.MemberErrorCode;
 import com.posong.ai_laundry.domain.member.repository.MemberRepository;
+import com.posong.ai_laundry.global.error.code.GlobalErrorCode;
 import com.posong.ai_laundry.global.error.exception.GeneralException;
+import com.posong.ai_laundry.global.file.ImageFileSizeExceededException;
 import com.posong.ai_laundry.global.file.ImageFileValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -191,6 +193,8 @@ public class ChatService {
 
 		try {
 			return ImageFileValidator.detectSupportedMimeType(image);
+		} catch (ImageFileSizeExceededException exception) {
+			throw new GeneralException(GlobalErrorCode.FILE_SIZE_EXCEEDED);
 		} catch (IllegalArgumentException exception) {
 			throw new GeneralException(ChatErrorCode.INVALID_IMAGE_TYPE);
 		}

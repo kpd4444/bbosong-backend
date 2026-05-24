@@ -8,6 +8,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 /**
  * 애플리케이션 전역에서 발생한 예외를 공통 API 응답 형식으로 변환한다.
@@ -37,6 +38,13 @@ public class GlobalExceptionHandler {
 		return ResponseEntity
 				.status(GlobalErrorCode.INVALID_INPUT_VALUE.getStatus())
 				.body(new ApiResponse<>(false, GlobalErrorCode.INVALID_INPUT_VALUE.getCode(), message, null));
+	}
+
+	@ExceptionHandler(MaxUploadSizeExceededException.class)
+	public ResponseEntity<ApiResponse<Void>> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException exception) {
+		return ResponseEntity
+				.status(GlobalErrorCode.FILE_SIZE_EXCEEDED.getStatus())
+				.body(ApiResponse.fail(GlobalErrorCode.FILE_SIZE_EXCEEDED));
 	}
 
 	/**

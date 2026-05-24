@@ -11,6 +11,7 @@ import java.io.InputStream;
 
 public final class ImageFileValidator {
 
+	private static final long MAX_IMAGE_SIZE_BYTES = 20L * 1024 * 1024;
 	private static final byte[] JPEG_MAGIC = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF};
 	private static final byte[] PNG_MAGIC = {(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
 
@@ -18,12 +19,22 @@ public final class ImageFileValidator {
 	}
 
 	public static MimeType detectSupportedMimeType(MultipartFile file) {
+		validateSize(file);
 		try {
 			MimeType mimeType = detectByMagicNumber(file);
 			validateDecodableImage(file);
 			return mimeType;
 		} catch (IOException exception) {
 			throw new IllegalArgumentException("Invalid image file", exception);
+		}
+	}
+
+	private static void validateSize(MultipartFile file) {
+		if (file.isEmpty()) {
+			throw new IllegalArgumentException("Empty image file");
+		}
+		if (file.getSize() > MAX_IMAGE_SIZE_BYTES) {
+			throw new ImageFileSizeExceededException("Image file size exceeds 20MB");
 		}
 	}
 
