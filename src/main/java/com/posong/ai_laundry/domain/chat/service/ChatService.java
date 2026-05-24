@@ -21,6 +21,7 @@ import com.posong.ai_laundry.global.resilience.ExternalApiCallTimeoutException;
 import com.posong.ai_laundry.global.resilience.ExternalApiCircuitBreaker;
 import com.posong.ai_laundry.global.resilience.ExternalApiCircuitOpenException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.SystemMessage;
@@ -41,6 +42,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 @Transactional(readOnly = true)
 public class ChatService {
 
@@ -127,6 +129,7 @@ public class ChatService {
 		} catch (GeneralException exception) {
 			throw exception;
 		} catch (Exception exception) {
+			log.warn("Failed to generate chat response", exception);
 			throw new GeneralException(ChatErrorCode.CHAT_RESPONSE_FAILED);
 		}
 	}
@@ -170,6 +173,7 @@ public class ChatService {
 							.getText()
 			);
 		} catch (ExternalApiCircuitOpenException | ExternalApiCallTimeoutException exception) {
+			log.warn("OpenAI chat response failed by circuit breaker or timeout", exception);
 			throw new GeneralException(ChatErrorCode.CHAT_RESPONSE_FAILED);
 		}
 

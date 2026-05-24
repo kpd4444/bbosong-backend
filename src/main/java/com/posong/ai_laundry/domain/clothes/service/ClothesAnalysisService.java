@@ -12,6 +12,7 @@ import com.posong.ai_laundry.global.resilience.ExternalApiCallTimeoutException;
 import com.posong.ai_laundry.global.resilience.ExternalApiCircuitBreaker;
 import com.posong.ai_laundry.global.resilience.ExternalApiCircuitOpenException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
@@ -26,6 +27,7 @@ import java.time.Duration;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ClothesAnalysisService {
 
 	private static final String OPENAI_CIRCUIT = "openai";
@@ -97,14 +99,18 @@ public class ClothesAnalysisService {
 							.getText()
 			);
 
-			ClothesAnalysisAiResDto result = outputConverter.convert(responseText);
+			ClothesAnalysisAiResDto result = outputConverter.convert(
+					ClothesAnalysisResponseNormalizer.normalize(responseText)
+			);
 			clothesAnalysisResultValidator.validate(result);
 			return ClothesAnalysisResDto.from(result);
 		} catch (ExternalApiCircuitOpenException | ExternalApiCallTimeoutException exception) {
+			log.warn("OpenAI clothes analysis failed by circuit breaker or timeout", exception);
 			throw new GeneralException(ClothesErrorCode.CLOTHES_ANALYSIS_FAILED);
 		} catch (GeneralException exception) {
 			throw exception;
 		} catch (Exception exception) {
+			log.warn("Failed to analyze clothes image", exception);
 			throw new GeneralException(ClothesErrorCode.CLOTHES_ANALYSIS_FAILED);
 		}
 	}
