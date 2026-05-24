@@ -3,7 +3,9 @@ package com.posong.ai_laundry.domain.clothes.service;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesAnalysisAiResDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesAnalysisResDto;
 import com.posong.ai_laundry.domain.clothes.exception.ClothesErrorCode;
+import com.posong.ai_laundry.global.error.code.GlobalErrorCode;
 import com.posong.ai_laundry.global.error.exception.GeneralException;
+import com.posong.ai_laundry.global.file.ImageFileSizeExceededException;
 import com.posong.ai_laundry.global.file.ImageFileValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.messages.UserMessage;
@@ -82,6 +84,8 @@ public class ClothesAnalysisService {
 
 		try {
 			return ImageFileValidator.detectSupportedMimeType(image);
+		} catch (ImageFileSizeExceededException exception) {
+			throw new GeneralException(GlobalErrorCode.FILE_SIZE_EXCEEDED);
 		} catch (IllegalArgumentException exception) {
 			throw new GeneralException(ClothesErrorCode.INVALID_IMAGE_TYPE);
 		}
