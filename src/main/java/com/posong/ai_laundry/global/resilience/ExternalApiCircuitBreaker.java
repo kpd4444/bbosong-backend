@@ -15,6 +15,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 
@@ -43,6 +44,19 @@ public class ExternalApiCircuitBreaker {
 	}
 
 	ExternalApiCircuitBreaker(int failureThreshold, Duration openDuration, Clock clock, int timeoutThreadLimit) {
+		if (failureThreshold <= 0) {
+			throw new IllegalArgumentException("실패 임계값은 1 이상이어야 합니다.");
+		}
+		if (openDuration == null || openDuration.isNegative() || openDuration.isZero()) {
+			throw new IllegalArgumentException("서킷 차단 시간은 0보다 커야 합니다.");
+		}
+		if (clock == null) {
+			throw new IllegalArgumentException("Clock은 null일 수 없습니다.");
+		}
+		if (timeoutThreadLimit <= 0) {
+			throw new IllegalArgumentException("타임아웃 처리 스레드 제한은 1 이상이어야 합니다.");
+		}
+
 		this.failureThreshold = failureThreshold;
 		this.openDuration = openDuration;
 		this.clock = clock;
@@ -58,7 +72,7 @@ public class ExternalApiCircuitBreaker {
 
 	public <T> T execute(String circuitName, Supplier<T> supplier) {
 		CircuitState state = stateOf(circuitName);
-		beforeCall(state);
+		beforeCall(circuitName, state);
 
 		try {
 			T result = supplier.get();
@@ -71,20 +85,29 @@ public class ExternalApiCircuitBreaker {
 	}
 
 	public <T> T execute(String circuitName, Duration timeout, Supplier<T> supplier) {
-		return execute(circuitName, () -> executeWithTimeout(timeout, supplier));
+		return execute(circuitName, () -> executeWithTimeout(circuitName, timeout, supplier));
 	}
 
-	private <T> T executeWithTimeout(Duration timeout, Supplier<T> supplier) {
-		Future<T> future = timeoutExecutor.submit(supplier::get);
+	private <T> T executeWithTimeout(String circuitName, Duration timeout, Supplier<T> supplier) {
+		Future<T> future;
+		try {
+			future = timeoutExecutor.submit(supplier::get);
+		} catch (RejectedExecutionException exception) {
+			throw new ExternalApiCallTimeoutException("외부 API 타임아웃 처리 스레드가 포화 상태입니다: circuit="
+					+ circuitName + ", timeout=" + timeout, exception);
+		}
+
 		try {
 			return future.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
 		} catch (TimeoutException exception) {
 			future.cancel(true);
-			throw new ExternalApiCallTimeoutException();
+			throw new ExternalApiCallTimeoutException("External API call timed out: circuit="
+					+ circuitName + ", timeout=" + timeout, exception);
 		} catch (InterruptedException exception) {
 			future.cancel(true);
 			Thread.currentThread().interrupt();
-			throw new ExternalApiCallTimeoutException();
+			throw new ExternalApiCallTimeoutException("External API call interrupted: circuit="
+					+ circuitName + ", timeout=" + timeout, exception);
 		} catch (Exception exception) {
 			throw unwrapException(exception);
 		}
@@ -107,18 +130,22 @@ public class ExternalApiCircuitBreaker {
 		return states.computeIfAbsent(circuitName, ignored -> new CircuitState());
 	}
 
-	private synchronized void beforeCall(CircuitState state) {
+	private synchronized void beforeCall(String circuitName, CircuitState state) {
 		if (state.status == CircuitStatus.CLOSED) {
 			return;
 		}
 
 		Instant now = clock.instant();
-		if (Duration.between(state.openedAt, now).compareTo(openDuration) < 0) {
-			throw new ExternalApiCircuitOpenException();
+		Duration elapsed = Duration.between(state.openedAt, now);
+		if (elapsed.compareTo(openDuration) < 0) {
+			Duration remaining = openDuration.minus(elapsed);
+			throw new ExternalApiCircuitOpenException("서킷이 열려 외부 API 호출을 차단했습니다: circuit="
+					+ circuitName + ", remaining=" + remaining);
 		}
 
 		if (state.status == CircuitStatus.HALF_OPEN) {
-			throw new ExternalApiCircuitOpenException();
+			throw new ExternalApiCircuitOpenException("서킷 회복 확인 요청이 이미 진행 중입니다: circuit="
+					+ circuitName);
 		}
 
 		state.status = CircuitStatus.HALF_OPEN;

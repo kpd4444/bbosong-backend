@@ -23,7 +23,7 @@ public class WeatherClientConfig {
 	@ConditionalOnMissingBean
 	public RestClient.Builder restClientBuilder(
 			@Value("${external-api.kma.connect-timeout:3s}") Duration connectTimeout,
-			@Value("${external-api.kma.read-timeout:5s}") Duration readTimeout
+			@Value("${external-api.kma.read-timeout:10s}") Duration readTimeout
 	) {
 		SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
 		requestFactory.setConnectTimeout(connectTimeout);
