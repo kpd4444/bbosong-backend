@@ -14,8 +14,11 @@ import com.posong.ai_laundry.domain.member.exception.MemberErrorCode;
 import com.posong.ai_laundry.domain.member.repository.MemberRepository;
 import com.posong.ai_laundry.global.error.code.GlobalErrorCode;
 import com.posong.ai_laundry.global.error.exception.GeneralException;
+import com.posong.ai_laundry.global.resilience.ExternalApiCallTimeoutException;
 import com.posong.ai_laundry.global.file.ImageFileSizeExceededException;
 import com.posong.ai_laundry.global.file.ImageFileValidator;
+import com.posong.ai_laundry.global.resilience.ExternalApiCircuitBreaker;
+import com.posong.ai_laundry.global.resilience.ExternalApiCircuitOpenException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
@@ -32,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.MimeType;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,6 +44,7 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class ChatService {
 
+	private static final String OPENAI_CIRCUIT = "openai";
 	private static final int MAX_CONTEXT_MESSAGES = 40;
 
 	private static final String SYSTEM_PROMPT = """
@@ -57,9 +62,13 @@ public class ChatService {
 	private final MemberRepository memberRepository;
 	private final ChatMapper chatMapper;
 	private final ChatModel chatModel;
+	private final ExternalApiCircuitBreaker externalApiCircuitBreaker;
 
 	@Value("${spring.ai.openai.chat.options.model:gpt-4o-mini}")
 	private String openAiModel;
+
+	@Value("${external-api.openai.call-timeout:60s}")
+	private Duration openAiCallTimeout;
 
 	public List<ChatMessageResDto> getMessages(Long memberId) {
 		validateMember(memberId);
@@ -140,11 +149,17 @@ public class ChatService {
 
 		promptMessages.add(buildCurrentUserMessage(currentContent, image, imageMimeType));
 
-		String responseText = chatModel.call(
-						new Prompt(promptMessages, OpenAiChatOptions.builder().model(openAiModel).build()))
-				.getResult()
-				.getOutput()
-				.getText();
+		String responseText;
+		try {
+			responseText = externalApiCircuitBreaker.execute(OPENAI_CIRCUIT, openAiCallTimeout, () ->
+					chatModel.call(new Prompt(promptMessages, OpenAiChatOptions.builder().model(openAiModel).build()))
+							.getResult()
+							.getOutput()
+							.getText()
+			);
+		} catch (ExternalApiCircuitOpenException | ExternalApiCallTimeoutException exception) {
+			throw new GeneralException(ChatErrorCode.CHAT_RESPONSE_FAILED);
+		}
 
 		if (!hasText(responseText)) {
 			throw new GeneralException(ChatErrorCode.CHAT_RESPONSE_FAILED);

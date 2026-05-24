@@ -39,3 +39,14 @@ weather:
   kma:
     service-key: ${KMA_SERVICE_KEY}
     endpoint: https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0
+
+external-api:
+  circuit-breaker:
+    failure-threshold: 3
+    open-duration: 30s
+    timeout-thread-limit: 8
+  kma:
+    connect-timeout: 3s
+    read-timeout: 10s
+  openai:
+    call-timeout: 60s

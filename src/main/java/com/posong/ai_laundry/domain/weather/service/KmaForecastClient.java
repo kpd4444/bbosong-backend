@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.posong.ai_laundry.domain.weather.config.KmaWeatherProperties;
 import com.posong.ai_laundry.domain.weather.exception.WeatherErrorCode;
 import com.posong.ai_laundry.global.error.exception.GeneralException;
+import com.posong.ai_laundry.global.resilience.ExternalApiCircuitBreaker;
+import com.posong.ai_laundry.global.resilience.ExternalApiCircuitOpenException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -19,11 +21,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class KmaForecastClient {
 
+	private static final String KMA_CIRCUIT = "kma-weather";
 	private static final String SUCCESS_CODE = "00";
 
 	private final KmaWeatherProperties kmaWeatherProperties;
 	private final ObjectMapper objectMapper;
 	private final RestClient.Builder restClientBuilder;
+	private final ExternalApiCircuitBreaker externalApiCircuitBreaker;
 
 	public List<KmaForecastItem> getVillageForecast(LocalDate baseDate, String baseTime, int nx, int ny) {
 		if (!StringUtils.hasText(kmaWeatherProperties.serviceKey())) {
@@ -44,6 +48,18 @@ public class KmaForecastClient {
 				.build(false)
 				.toUriString();
 
+		try {
+			return externalApiCircuitBreaker.execute(KMA_CIRCUIT, () -> fetchAndParseForecastItems(uri));
+		} catch (ExternalApiCircuitOpenException exception) {
+			throw new GeneralException(WeatherErrorCode.WEATHER_API_FAILED);
+		} catch (GeneralException exception) {
+			throw exception;
+		} catch (Exception exception) {
+			throw new GeneralException(WeatherErrorCode.WEATHER_API_FAILED);
+		}
+	}
+
+	private List<KmaForecastItem> fetchAndParseForecastItems(String uri) {
 		try {
 			String response = restClientBuilder.build()
 					.get()
