@@ -3,11 +3,12 @@ package com.posong.ai_laundry.domain.clothes.service;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesAnalysisAiResDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesAnalysisResDto;
 import com.posong.ai_laundry.domain.clothes.exception.ClothesErrorCode;
+import com.posong.ai_laundry.global.ai.OpenAiChatOptionsFactory;
 import com.posong.ai_laundry.global.error.code.GlobalErrorCode;
 import com.posong.ai_laundry.global.error.exception.GeneralException;
-import com.posong.ai_laundry.global.resilience.ExternalApiCallTimeoutException;
 import com.posong.ai_laundry.global.file.ImageFileSizeExceededException;
 import com.posong.ai_laundry.global.file.ImageFileValidator;
+import com.posong.ai_laundry.global.resilience.ExternalApiCallTimeoutException;
 import com.posong.ai_laundry.global.resilience.ExternalApiCircuitBreaker;
 import com.posong.ai_laundry.global.resilience.ExternalApiCircuitOpenException;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +17,6 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.content.Media;
 import org.springframework.ai.converter.BeanOutputConverter;
-import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.MimeType;
@@ -31,30 +31,48 @@ public class ClothesAnalysisService {
 	private static final String OPENAI_CIRCUIT = "openai";
 
 	private static final String ANALYSIS_PROMPT = """
-			너는 세탁 가이드를 만드는 의류 분석가다.
-			입력된 옷 사진을 보고 아래 기준으로만 판단해라.
+			너는 의류 이미지 분석 전문가다.
+			사용자가 업로드한 옷 사진을 보고 세탁 가이드 생성에 필요한 정보를 추출한다.
+			사진에서 확인 가능한 시각 정보만 사용하고, 확실하지 않은 내용은 보수적으로 추정한다.
 
-			- categoryName: 상의, 하의, 아우터, 원피스, 치마, 속옷, 잠옷, 기타 중 하나로 답한다.
-			- name: 사용자가 구분하기 쉬운 직관적인 의류 이름으로 답한다.
-			- material: 사진만 보고 추정 가능한 소재를 자연스럽게 적는다. 혼용률을 추정치임을 반영해도 좋다.
-			- color: 대표 색상을 한글로 답한다.
-			- washingMethod: 세탁 온도, 권장 코스, 세제 종류, 단독 세탁 여부, 손세탁 필요 여부를 포함해서 2~3문장으로 자세히 설명한다.
-			  단순한 결론만 짧게 적지 말고, 왜 그런 세탁 방법이 적절한지도 짧게 덧붙인다.
-			  예를 들어 중성세제가 필요하면 중성세제를 쓰는 이유를 한 문장 안에 자연스럽게 포함시킨다.
-			- caution: 수축, 이염, 건조기, 표백제, 다림질 등 주의사항을 2~3문장으로 자세히 설명한다.
-			  단순 경고만 적지 말고, 어떤 문제가 생길 수 있는지와 피하는 방법도 함께 적는다.
+			공통 응답 규칙:
+			- 반드시 JSON만 반환한다. JSON 앞뒤에 설명, 마크다운, 코드블록을 붙이지 않는다.
+			- 모든 필드는 null이나 빈 문자열 없이 채운다.
+			- 사진만으로 확실하지 않은 값은 단정하지 말고 "추정" 또는 "알 수 없음"을 포함해 작성한다.
+			- 관리 방법은 안전한 쪽을 우선한다. 확실하지 않으면 고온 세탁, 강한 탈수, 건조기, 표백제 사용을 권하지 않는다.
+			- 세탁 라벨을 직접 읽을 수 없는 경우 라벨 확인이 필요하다는 문장을 자연스럽게 포함한다.
+			- 사용자가 바로 참고할 수 있게 한국어 문장으로 구체적으로 작성한다.
 
-			추정이 필요한 항목은 가장 보수적으로 판단하고, 모르면 과장하지 말아라.
-			사용자가 바로 세탁에 참고할 수 있도록 자연스럽고 구체적인 한국어 문장으로 작성해라.
-			반드시 JSON으로만 응답해라.
+			필드별 작성 기준:
+			- categoryName:
+			  상의, 하의, 아우터, 원피스, 치마, 속옷, 신발, 기타 중 하나만 작성한다.
+			  분류가 애매하면 가장 안전한 상위 분류를 선택하고, 정말 판단이 어려우면 기타를 사용한다.
+			- name:
+			  색상이나 형태를 포함해 사용자가 구분하기 쉬운 짧은 이름으로 작성한다.
+			  예: 흰색 반팔 티셔츠, 검정 패딩 점퍼, 파란 데님 팬츠
+			- material:
+			  사진으로 추정 가능한 소재를 작성한다.
+			  혼용률을 임의로 만들지 않는다.
+			  소재가 불확실하면 "면 소재로 추정", "합성섬유로 추정", "사진만으로 정확한 소재는 알 수 없음"처럼 작성한다.
+			- color:
+			  가장 넓게 보이는 대표 색상을 한글로 작성한다.
+			  여러 색이 뚜렷하면 "흰색과 검정", "파란색 계열"처럼 작성한다.
+			- washingMethod:
+			  2~3문장으로 작성한다.
+			  권장 물 온도, 세탁 코스, 세제 종류, 단독 세탁 여부를 포함한다.
+			  소재가 불확실하면 라벨 확인을 전제로 찬물, 약한 코스, 중성세제처럼 안전한 방법을 권장한다.
+			- caution:
+			  2~3문장으로 작성한다.
+			  수축, 이염, 형태 변형, 건조기 사용, 표백제 사용, 직사광선 건조 중 관련 있는 위험을 포함한다.
+			  위험만 나열하지 말고 피하는 방법도 함께 작성한다.
+
 			{format}
 			""";
 
 	private final ChatModel chatModel;
 	private final ExternalApiCircuitBreaker externalApiCircuitBreaker;
-
-	@Value("${spring.ai.openai.chat.options.model:gpt-4o-mini}")
-	private String openAiModel;
+	private final OpenAiChatOptionsFactory openAiChatOptionsFactory;
+	private final ClothesAnalysisResultValidator clothesAnalysisResultValidator;
 
 	@Value("${external-api.openai.call-timeout:60s}")
 	private Duration openAiCallTimeout;
@@ -73,14 +91,14 @@ public class ClothesAnalysisService {
 
 		try {
 			String responseText = externalApiCircuitBreaker.execute(OPENAI_CIRCUIT, openAiCallTimeout, () ->
-					chatModel.call(new Prompt(userMessage, OpenAiChatOptions.builder().model(openAiModel).build()))
+					chatModel.call(new Prompt(userMessage, openAiChatOptionsFactory.create()))
 							.getResult()
 							.getOutput()
 							.getText()
 			);
 
 			ClothesAnalysisAiResDto result = outputConverter.convert(responseText);
-			validateResult(result);
+			clothesAnalysisResultValidator.validate(result);
 			return ClothesAnalysisResDto.from(result);
 		} catch (ExternalApiCircuitOpenException | ExternalApiCallTimeoutException exception) {
 			throw new GeneralException(ClothesErrorCode.CLOTHES_ANALYSIS_FAILED);
@@ -103,21 +121,5 @@ public class ClothesAnalysisService {
 		} catch (IllegalArgumentException exception) {
 			throw new GeneralException(ClothesErrorCode.INVALID_IMAGE_TYPE);
 		}
-	}
-
-	private void validateResult(ClothesAnalysisAiResDto result) {
-		if (result == null
-				|| isBlank(result.categoryName())
-				|| isBlank(result.name())
-				|| isBlank(result.material())
-				|| isBlank(result.color())
-				|| isBlank(result.washingMethod())
-				|| isBlank(result.caution())) {
-			throw new GeneralException(ClothesErrorCode.INVALID_ANALYSIS_RESULT);
-		}
-	}
-
-	private boolean isBlank(String value) {
-		return value == null || value.isBlank();
 	}
 }

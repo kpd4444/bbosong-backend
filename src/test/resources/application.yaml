@@ -4,7 +4,7 @@ spring:
       api-key: test-openai-key
       chat:
         options:
-          model: gpt-4o-mini
+          model: gpt-5-mini
   security:
     oauth2:
       client:
@@ -53,3 +53,7 @@ jwt:
 app:
   oauth2:
     success-redirect-uri: http://localhost:3000/oauth/success
+
+external-api:
+  openai:
+    temperature: 0.2

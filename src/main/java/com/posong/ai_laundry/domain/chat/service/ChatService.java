@@ -12,11 +12,12 @@ import com.posong.ai_laundry.domain.chat.repository.ChatRoomRepository;
 import com.posong.ai_laundry.domain.member.entity.Member;
 import com.posong.ai_laundry.domain.member.exception.MemberErrorCode;
 import com.posong.ai_laundry.domain.member.repository.MemberRepository;
+import com.posong.ai_laundry.global.ai.OpenAiChatOptionsFactory;
 import com.posong.ai_laundry.global.error.code.GlobalErrorCode;
 import com.posong.ai_laundry.global.error.exception.GeneralException;
-import com.posong.ai_laundry.global.resilience.ExternalApiCallTimeoutException;
 import com.posong.ai_laundry.global.file.ImageFileSizeExceededException;
 import com.posong.ai_laundry.global.file.ImageFileValidator;
+import com.posong.ai_laundry.global.resilience.ExternalApiCallTimeoutException;
 import com.posong.ai_laundry.global.resilience.ExternalApiCircuitBreaker;
 import com.posong.ai_laundry.global.resilience.ExternalApiCircuitOpenException;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +28,6 @@ import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.content.Media;
-import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -48,11 +48,25 @@ public class ChatService {
 	private static final int MAX_CONTEXT_MESSAGES = 40;
 
 	private static final String SYSTEM_PROMPT = """
-			너는 세탁 상담을 도와주는 AI다.
-			사용자의 질문에 한국어로 답하고 세탁 방법, 건조 방법, 주의사항을 실용적으로 설명한다.
-			모르는 내용은 단정하지 말고 일반적인 기준임을 분명히 말한다.
-			위험하거나 확신할 수 없는 내용은 보수적으로 안내한다.
-			답변은 지나치게 길지 않게 하되 실제로 바로 따라할 수 있게 구체적으로 설명한다.
+			너는 의류 관리 상담을 돕는 AI다.
+			사용자의 질문과 첨부 이미지를 바탕으로 세탁, 건조, 보관, 얼룩 제거, 의류 손상 방지 방법을 안내한다.
+
+			상담 원칙:
+			- 항상 한국어로 답한다.
+			- 사용자가 바로 실행할 수 있게 단계와 기준을 구체적으로 말한다.
+			- 확실하지 않은 내용은 단정하지 말고 "일반적인 기준", "라벨 확인 필요", "사진만으로는 추정"처럼 표현한다.
+			- 의류 손상 위험이 있으면 보수적으로 안내한다.
+			- 고온 세탁, 건조기, 표백제, 강한 탈수, 다림질은 소재가 확실하지 않으면 권하지 않는다.
+			- 세탁 라벨 확인이 중요한 경우 반드시 언급한다.
+			- 사용자가 위험한 방법을 물어보면 더 안전한 대안을 제시한다.
+
+			답변 구성:
+			- 질문이 간단하면 2~4문장으로 간결하게 답한다.
+			- 세탁 방법을 묻는 경우 물 온도, 세탁 코스, 세제, 단독 세탁 여부를 포함한다.
+			- 건조 방법을 묻는 경우 건조기 사용 가능성, 그늘 건조, 형태 유지 방법을 포함한다.
+			- 얼룩 제거를 묻는 경우 문지르기보다 두드려 제거하고, 눈에 띄지 않는 부분에 먼저 테스트하라고 안내한다.
+			- 이미지가 첨부되었지만 판단이 어려우면 추정 가능한 부분과 확인이 필요한 부분을 나누어 말한다.
+			- 불필요한 자기소개, 장황한 설명, 마크다운 표는 사용하지 않는다.
 			""";
 
 	private static final String IMAGE_ONLY_PLACEHOLDER = "[이미지 첨부]";
@@ -63,9 +77,7 @@ public class ChatService {
 	private final ChatMapper chatMapper;
 	private final ChatModel chatModel;
 	private final ExternalApiCircuitBreaker externalApiCircuitBreaker;
-
-	@Value("${spring.ai.openai.chat.options.model:gpt-4o-mini}")
-	private String openAiModel;
+	private final OpenAiChatOptionsFactory openAiChatOptionsFactory;
 
 	@Value("${external-api.openai.call-timeout:60s}")
 	private Duration openAiCallTimeout;
@@ -152,7 +164,7 @@ public class ChatService {
 		String responseText;
 		try {
 			responseText = externalApiCircuitBreaker.execute(OPENAI_CIRCUIT, openAiCallTimeout, () ->
-					chatModel.call(new Prompt(promptMessages, OpenAiChatOptions.builder().model(openAiModel).build()))
+					chatModel.call(new Prompt(promptMessages, openAiChatOptionsFactory.create()))
 							.getResult()
 							.getOutput()
 							.getText()
@@ -171,7 +183,7 @@ public class ChatService {
 	private UserMessage buildCurrentUserMessage(String content, MultipartFile image, MimeType imageMimeType) {
 		String promptText = hasText(content)
 				? content
-				: "첨부한 이미지를 보고 세탁 상담을 해줘.";
+				: "첨부한 이미지를 보고 의류 관리 방법을 알려줘.";
 
 		if (image == null || image.isEmpty()) {
 			return new UserMessage(promptText);
