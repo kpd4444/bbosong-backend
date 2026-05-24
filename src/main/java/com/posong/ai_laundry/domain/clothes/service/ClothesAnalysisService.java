@@ -5,8 +5,11 @@ import com.posong.ai_laundry.domain.clothes.dto.ClothesAnalysisResDto;
 import com.posong.ai_laundry.domain.clothes.exception.ClothesErrorCode;
 import com.posong.ai_laundry.global.error.code.GlobalErrorCode;
 import com.posong.ai_laundry.global.error.exception.GeneralException;
+import com.posong.ai_laundry.global.resilience.ExternalApiCallTimeoutException;
 import com.posong.ai_laundry.global.file.ImageFileSizeExceededException;
 import com.posong.ai_laundry.global.file.ImageFileValidator;
+import com.posong.ai_laundry.global.resilience.ExternalApiCircuitBreaker;
+import com.posong.ai_laundry.global.resilience.ExternalApiCircuitOpenException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
@@ -19,9 +22,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.MimeType;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Duration;
+
 @Service
 @RequiredArgsConstructor
 public class ClothesAnalysisService {
+
+	private static final String OPENAI_CIRCUIT = "openai";
 
 	private static final String ANALYSIS_PROMPT = """
 			너는 세탁 가이드를 만드는 의류 분석가다.
@@ -44,9 +51,13 @@ public class ClothesAnalysisService {
 			""";
 
 	private final ChatModel chatModel;
+	private final ExternalApiCircuitBreaker externalApiCircuitBreaker;
 
 	@Value("${spring.ai.openai.chat.options.model:gpt-4o-mini}")
 	private String openAiModel;
+
+	@Value("${external-api.openai.call-timeout:60s}")
+	private Duration openAiCallTimeout;
 
 	public ClothesAnalysisResDto analyze(MultipartFile image) {
 		MimeType imageMimeType = validateAndResolveImage(image);
@@ -61,15 +72,18 @@ public class ClothesAnalysisService {
 				.build();
 
 		try {
-			String responseText = chatModel.call(
-							new Prompt(userMessage, OpenAiChatOptions.builder().model(openAiModel).build()))
-					.getResult()
-					.getOutput()
-					.getText();
+			String responseText = externalApiCircuitBreaker.execute(OPENAI_CIRCUIT, openAiCallTimeout, () ->
+					chatModel.call(new Prompt(userMessage, OpenAiChatOptions.builder().model(openAiModel).build()))
+							.getResult()
+							.getOutput()
+							.getText()
+			);
 
 			ClothesAnalysisAiResDto result = outputConverter.convert(responseText);
 			validateResult(result);
 			return ClothesAnalysisResDto.from(result);
+		} catch (ExternalApiCircuitOpenException | ExternalApiCallTimeoutException exception) {
+			throw new GeneralException(ClothesErrorCode.CLOTHES_ANALYSIS_FAILED);
 		} catch (GeneralException exception) {
 			throw exception;
 		} catch (Exception exception) {
