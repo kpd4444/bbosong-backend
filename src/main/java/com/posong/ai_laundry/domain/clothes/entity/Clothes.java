@@ -54,8 +54,8 @@ public class Clothes {
 	@Column(nullable = false, length = 500)
 	private String caution;
 
-	@Column(name = "image_url", length = 500)
-	private String imageUrl;
+	@Column(name = "image_key", length = 500)
+	private String imageKey;
 
 	@Column(name = "is_favorite", nullable = false)
 	private boolean isFavorite;
@@ -71,7 +71,7 @@ public class Clothes {
 
 	@Builder
 	private Clothes(Member member, Category category, String name, String material, String color,
-				 String washingMethod, String caution, String imageUrl, boolean isFavorite) {
+				 String washingMethod, String caution, String imageKey, boolean isFavorite) {
 		this.member = member;
 		this.category = category;
 		this.name = name;
@@ -79,7 +79,7 @@ public class Clothes {
 		this.color = color;
 		this.washingMethod = washingMethod;
 		this.caution = caution;
-		this.imageUrl = imageUrl;
+		this.imageKey = imageKey;
 		this.isFavorite = isFavorite;
 	}
 

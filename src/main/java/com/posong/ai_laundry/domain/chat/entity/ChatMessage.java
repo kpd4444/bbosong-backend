@@ -42,14 +42,18 @@ public class ChatMessage {
 	@Column(nullable = false, length = 2000)
 	private String content;
 
+	@Column(name = "image_key", length = 500)
+	private String imageKey;
+
 	@Column(name = "created_at", nullable = false)
 	private LocalDateTime createdAt;
 
 	@Builder
-	private ChatMessage(ChatRoom chatRoom, MessageSenderType senderType, String content) {
+	private ChatMessage(ChatRoom chatRoom, MessageSenderType senderType, String content, String imageKey) {
 		this.chatRoom = chatRoom;
 		this.senderType = senderType;
 		this.content = content;
+		this.imageKey = imageKey;
 	}
 
 	@PrePersist

@@ -17,12 +17,18 @@ import com.posong.ai_laundry.domain.clothes.repository.ClothesRepository;
 import com.posong.ai_laundry.domain.member.entity.Member;
 import com.posong.ai_laundry.domain.member.exception.MemberErrorCode;
 import com.posong.ai_laundry.domain.member.repository.MemberRepository;
+import com.posong.ai_laundry.global.error.code.GlobalErrorCode;
 import com.posong.ai_laundry.global.error.exception.GeneralException;
+import com.posong.ai_laundry.global.file.ImageFileSizeExceededException;
+import com.posong.ai_laundry.global.file.ImageFileValidator;
+import com.posong.ai_laundry.global.storage.ImageStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.MimeType;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -35,17 +41,20 @@ public class ClothesService {
 	private final CategoryRepository categoryRepository;
 	private final MemberRepository memberRepository;
 	private final ClothesMapper clothesMapper;
+	private final ImageStorageService imageStorageService;
 
 	@Transactional
-	public ClothesSaveResDto save(Long memberId, ClothesSaveReqDto request) {
+	public ClothesSaveResDto save(Long memberId, ClothesSaveReqDto request, MultipartFile image) {
 		Member member = memberRepository.findById(memberId)
 				.orElseThrow(() -> new GeneralException(MemberErrorCode.MEMBER_NOT_FOUND));
+		MimeType imageMimeType = validateAndResolveImage(image);
 
 		String normalizedCategoryName = normalizeCategoryName(request.categoryName());
 		Category category = categoryRepository.findByName(normalizedCategoryName)
 				.orElseGet(() -> createCategorySafely(normalizedCategoryName));
 
-		Clothes clothes = clothesRepository.save(clothesMapper.toClothes(member, category, request));
+		String imageKey = imageStorageService.uploadClothesImage(image, imageMimeType);
+		Clothes clothes = clothesRepository.save(clothesMapper.toClothes(member, category, request, imageKey));
 		return clothesMapper.toClothesSaveResDto(clothes);
 	}
 
@@ -153,6 +162,20 @@ public class ClothesService {
 
 	private boolean hasText(String value) {
 		return value != null && !value.isBlank();
+	}
+
+	private MimeType validateAndResolveImage(MultipartFile image) {
+		if (image == null || image.isEmpty()) {
+			throw new GeneralException(ClothesErrorCode.IMAGE_REQUIRED);
+		}
+
+		try {
+			return ImageFileValidator.detectSupportedMimeType(image);
+		} catch (ImageFileSizeExceededException exception) {
+			throw new GeneralException(GlobalErrorCode.FILE_SIZE_EXCEEDED);
+		} catch (IllegalArgumentException exception) {
+			throw new GeneralException(ClothesErrorCode.INVALID_IMAGE_TYPE);
+		}
 	}
 
 	private Category createCategorySafely(String categoryName) {

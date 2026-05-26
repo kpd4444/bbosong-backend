@@ -4,16 +4,22 @@ import com.posong.ai_laundry.domain.chat.constant.MessageSenderType;
 import com.posong.ai_laundry.domain.chat.dto.ChatMessageResDto;
 import com.posong.ai_laundry.domain.chat.entity.ChatMessage;
 import com.posong.ai_laundry.domain.chat.entity.ChatRoom;
+import com.posong.ai_laundry.global.storage.ImageUrlResolver;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class ChatMapper {
 
-	public ChatMessage toUserMessage(ChatRoom chatRoom, String content) {
+	private final ImageUrlResolver imageUrlResolver;
+
+	public ChatMessage toUserMessage(ChatRoom chatRoom, String content, String imageKey) {
 		return ChatMessage.builder()
 				.chatRoom(chatRoom)
 				.senderType(MessageSenderType.USER)
 				.content(content)
+				.imageKey(imageKey)
 				.build();
 	}
 
@@ -30,6 +36,7 @@ public class ChatMapper {
 				chatMessage.getChatMessageId(),
 				chatMessage.getSenderType(),
 				chatMessage.getContent(),
+				imageUrlResolver.resolve(chatMessage.getImageKey()),
 				chatMessage.getCreatedAt()
 		);
 	}

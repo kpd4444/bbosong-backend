@@ -20,6 +20,7 @@ import com.posong.ai_laundry.global.file.ImageFileValidator;
 import com.posong.ai_laundry.global.resilience.ExternalApiCallTimeoutException;
 import com.posong.ai_laundry.global.resilience.ExternalApiCircuitBreaker;
 import com.posong.ai_laundry.global.resilience.ExternalApiCircuitOpenException;
+import com.posong.ai_laundry.global.storage.ImageStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -80,6 +81,7 @@ public class ChatService {
 	private final ChatModel chatModel;
 	private final ExternalApiCircuitBreaker externalApiCircuitBreaker;
 	private final OpenAiChatOptionsFactory openAiChatOptionsFactory;
+	private final ImageStorageService imageStorageService;
 
 	@Value("${external-api.openai.call-timeout:60s}")
 	private Duration openAiCallTimeout;
@@ -105,8 +107,11 @@ public class ChatService {
 
 		String normalizedContent = normalizeContent(content);
 		String savedUserContent = hasText(normalizedContent) ? normalizedContent : IMAGE_ONLY_PLACEHOLDER;
+		String imageKey = image == null || image.isEmpty()
+				? null
+				: imageStorageService.uploadChatImage(image, imageMimeType);
 
-		ChatMessage userMessage = chatMessageRepository.save(chatMapper.toUserMessage(chatRoom, savedUserContent));
+		ChatMessage userMessage = chatMessageRepository.save(chatMapper.toUserMessage(chatRoom, savedUserContent, imageKey));
 		List<ChatMessage> messages = chatMessageRepository.findAllByChatRoom_ChatRoomIdOrderByCreatedAtAscChatMessageIdAsc(chatRoom.getChatRoomId());
 		if (messages.size() > MAX_CONTEXT_MESSAGES) {
 			messages = messages.subList(messages.size() - MAX_CONTEXT_MESSAGES, messages.size());

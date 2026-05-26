@@ -51,3 +51,10 @@ external-api:
   openai:
     call-timeout: 60s
     temperature: 0.2
+
+aws:
+  region: ${AWS_REGION:ap-northeast-2}
+  s3:
+    bucket: ${AWS_S3_BUCKET}
+  cloudfront:
+    domain: ${AWS_CLOUDFRONT_DOMAIN}
