@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,7 +24,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -39,12 +42,13 @@ public class ClothesController {
 			summary = "의류 저장",
 			description = "분석 결과를 확인한 뒤 의류 정보를 옷장에 저장합니다. 카테고리 값은 서버에서 정규화한 뒤 category 테이블과 연결합니다."
 	)
-	@PostMapping
+	@PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ApiResponse<ClothesSaveResDto> save(
 			@AuthenticationPrincipal Long memberId,
-			@Valid @RequestBody ClothesSaveReqDto request
+			@Valid @RequestPart("request") ClothesSaveReqDto request,
+			@RequestPart("image") MultipartFile image
 	) {
-		return ApiResponse.success(clothesService.save(memberId, request));
+		return ApiResponse.success(clothesService.save(memberId, request, image));
 	}
 
 	@Operation(

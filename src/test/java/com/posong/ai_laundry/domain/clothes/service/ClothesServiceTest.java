@@ -8,11 +8,12 @@ import com.posong.ai_laundry.domain.clothes.repository.CategoryRepository;
 import com.posong.ai_laundry.domain.clothes.repository.ClothesRepository;
 import com.posong.ai_laundry.domain.member.entity.Member;
 import com.posong.ai_laundry.domain.member.repository.MemberRepository;
+import com.posong.ai_laundry.global.storage.ImageStorageService;
+import com.posong.ai_laundry.global.storage.ImageUrlResolver;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
@@ -35,11 +36,25 @@ class ClothesServiceTest {
 	@Mock
 	private MemberRepository memberRepository;
 
-	@Spy
-	private ClothesMapper clothesMapper = new ClothesMapper();
+	@Mock
+	private ImageUrlResolver imageUrlResolver;
 
-	@InjectMocks
+	@Mock
+	private ImageStorageService imageStorageService;
+
 	private ClothesService clothesService;
+
+	@BeforeEach
+	void setUp() {
+		ClothesMapper clothesMapper = new ClothesMapper(imageUrlResolver);
+		clothesService = new ClothesService(
+				clothesRepository,
+				categoryRepository,
+				memberRepository,
+				clothesMapper,
+				imageStorageService
+		);
+	}
 
 	@Test
 	void getHomeClothesReturnsRecentAndFavoriteTopFive() {
@@ -81,7 +96,9 @@ class ClothesServiceTest {
 		when(clothes.getCategory()).thenReturn(category);
 		when(clothes.getName()).thenReturn(name);
 		when(clothes.getColor()).thenReturn("화이트");
-		when(clothes.getImageUrl()).thenReturn("https://example.com/" + clothesId + ".jpg");
+		when(clothes.getImageKey()).thenReturn("clothes/2026/05/" + clothesId + ".jpg");
+		when(imageUrlResolver.resolve("clothes/2026/05/" + clothesId + ".jpg"))
+				.thenReturn("https://example.com/" + clothesId + ".jpg");
 		when(clothes.isFavorite()).thenReturn(isFavorite);
 		when(clothes.getCreatedAt()).thenReturn(createdAt);
 

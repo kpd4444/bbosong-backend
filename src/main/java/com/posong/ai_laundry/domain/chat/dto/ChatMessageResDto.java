@@ -12,8 +12,11 @@ public record ChatMessageResDto(
 		@Schema(description = "메시지 발신자 유형", example = "USER")
 		MessageSenderType senderType,
 
-		@Schema(description = "채팅 내용", example = "이 니트는 어떻게 세탁해야 해?")
+		@Schema(description = "채팅 내용", example = "니트는 어떻게 세탁해야 해?")
 		String content,
+
+		@Schema(description = "첨부 이미지 CloudFront URL", example = "https://d1p2f1o7ynqpg7.cloudfront.net/chat/2026/05/uuid.png")
+		String imageUrl,
 
 		@Schema(description = "메시지 생성 시각", example = "2026-05-11T10:30:00")
 		LocalDateTime createdAt
