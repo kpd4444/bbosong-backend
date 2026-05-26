@@ -54,8 +54,13 @@ public class ClothesService {
 				.orElseGet(() -> createCategorySafely(normalizedCategoryName));
 
 		String imageKey = imageStorageService.uploadClothesImage(image, imageMimeType);
-		Clothes clothes = clothesRepository.save(clothesMapper.toClothes(member, category, request, imageKey));
-		return clothesMapper.toClothesSaveResDto(clothes);
+		try {
+			Clothes clothes = clothesRepository.save(clothesMapper.toClothes(member, category, request, imageKey));
+			return clothesMapper.toClothesSaveResDto(clothes);
+		} catch (RuntimeException exception) {
+			imageStorageService.delete(imageKey);
+			throw exception;
+		}
 	}
 
 	public List<ClothesSummaryResDto> getClothes(Long memberId, String categoryName) {

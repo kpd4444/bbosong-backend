@@ -111,13 +111,13 @@ public class ChatService {
 				? null
 				: imageStorageService.uploadChatImage(image, imageMimeType);
 
-		ChatMessage userMessage = chatMessageRepository.save(chatMapper.toUserMessage(chatRoom, savedUserContent, imageKey));
-		List<ChatMessage> messages = chatMessageRepository.findAllByChatRoom_ChatRoomIdOrderByCreatedAtAscChatMessageIdAsc(chatRoom.getChatRoomId());
-		if (messages.size() > MAX_CONTEXT_MESSAGES) {
-			messages = messages.subList(messages.size() - MAX_CONTEXT_MESSAGES, messages.size());
-		}
-
 		try {
+			ChatMessage userMessage = chatMessageRepository.save(chatMapper.toUserMessage(chatRoom, savedUserContent, imageKey));
+			List<ChatMessage> messages = chatMessageRepository.findAllByChatRoom_ChatRoomIdOrderByCreatedAtAscChatMessageIdAsc(chatRoom.getChatRoomId());
+			if (messages.size() > MAX_CONTEXT_MESSAGES) {
+				messages = messages.subList(messages.size() - MAX_CONTEXT_MESSAGES, messages.size());
+			}
+
 			String assistantAnswer = generateAssistantAnswer(
 					messages,
 					userMessage.getChatMessageId(),
@@ -132,8 +132,10 @@ public class ChatService {
 					chatMapper.toChatMessageResDto(assistantMessage)
 			);
 		} catch (GeneralException exception) {
+			imageStorageService.delete(imageKey);
 			throw exception;
 		} catch (Exception exception) {
+			imageStorageService.delete(imageKey);
 			log.warn("Failed to generate chat response", exception);
 			throw new GeneralException(ChatErrorCode.CHAT_RESPONSE_FAILED);
 		}

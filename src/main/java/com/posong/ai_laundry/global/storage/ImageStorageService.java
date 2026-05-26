@@ -9,6 +9,7 @@ import org.springframework.util.MimeType;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
@@ -33,6 +34,22 @@ public class ImageStorageService {
 
 	public String uploadChatImage(MultipartFile image, MimeType mimeType) {
 		return upload(image, mimeType, "chat");
+	}
+
+	public void delete(String imageKey) {
+		if (imageKey == null || imageKey.isBlank()) {
+			return;
+		}
+
+		try {
+			DeleteObjectRequest request = DeleteObjectRequest.builder()
+					.bucket(resolveBucket())
+					.key(imageKey)
+					.build();
+			s3Client.deleteObject(request);
+		} catch (RuntimeException exception) {
+			log.warn("Failed to delete image from S3. key={}", imageKey, exception);
+		}
 	}
 
 	private String upload(MultipartFile image, MimeType mimeType, String prefix) {
