@@ -1,0 +1,180 @@
+[
+  {
+    "caseId": "black_jacket_001",
+    "image": "black_jacket_001.png",
+    "labelImage": "black_jacket_001_label.png",
+    "verifiedBy": "label_image",
+    "groundTruth": {
+      "categoryName": "아우터",
+      "waterWash": true,
+      "maxWaterTemperature": 40,
+      "bleachAllowed": false,
+      "dryerAllowed": false,
+      "ironAllowed": true,
+      "dryCleanAllowed": false,
+      "handWashRequired": false,
+      "separateWashRequired": true
+    },
+    "riskItems": [
+      "maxWaterTemperature",
+      "bleachAllowed",
+      "dryerAllowed",
+      "dryCleanAllowed"
+    ]
+  },
+  {
+    "caseId": "denim_shirt_001",
+    "image": "denim_shirt_001.png",
+    "labelImage": "denim_shirt_001_label.png",
+    "verifiedBy": "label_image",
+    "groundTruth": {
+      "categoryName": "상의",
+      "waterWash": true,
+      "maxWaterTemperature": 30,
+      "bleachAllowed": false,
+      "dryerAllowed": true,
+      "ironAllowed": true,
+      "dryCleanAllowed": null,
+      "handWashRequired": false,
+      "separateWashRequired": false
+    },
+    "riskItems": [
+      "maxWaterTemperature",
+      "bleachAllowed"
+    ]
+  },
+  {
+    "caseId": "brown_shirt_001",
+    "image": "brown_shirt_001.png",
+    "labelImage": "brown_shirt_001_label.png",
+    "verifiedBy": "label_image",
+    "groundTruth": {
+      "categoryName": "상의",
+      "waterWash": true,
+      "maxWaterTemperature": 30,
+      "bleachAllowed": false,
+      "dryerAllowed": false,
+      "ironAllowed": false,
+      "dryCleanAllowed": false,
+      "handWashRequired": false,
+      "separateWashRequired": false
+    },
+    "riskItems": [
+      "maxWaterTemperature",
+      "bleachAllowed",
+      "dryerAllowed",
+      "ironAllowed",
+      "dryCleanAllowed"
+    ]
+  },
+  {
+    "caseId": "black_jacket_002",
+    "image": "black_jacket_002.png",
+    "labelImage": "black_jacket_002_label.png",
+    "verifiedBy": "label_image",
+    "groundTruth": {
+      "categoryName": "아우터",
+      "waterWash": true,
+      "maxWaterTemperature": 40,
+      "bleachAllowed": false,
+      "dryerAllowed": false,
+      "ironAllowed": false,
+      "dryCleanAllowed": false,
+      "handWashRequired": true,
+      "separateWashRequired": null
+    },
+    "riskItems": [
+      "maxWaterTemperature",
+      "bleachAllowed",
+      "dryerAllowed",
+      "ironAllowed",
+      "dryCleanAllowed"
+    ]
+  },
+  {
+    "caseId": "brown_jacket_001",
+    "image": "brown_jacket_001.png",
+    "labelImage": "brown_jacket_001_label.png",
+    "verifiedBy": "label_image",
+    "groundTruth": {
+      "categoryName": "아우터",
+      "waterWash": true,
+      "maxWaterTemperature": 30,
+      "bleachAllowed": false,
+      "dryerAllowed": false,
+      "ironAllowed": null,
+      "dryCleanAllowed": false,
+      "handWashRequired": true,
+      "separateWashRequired": null
+    },
+    "riskItems": [
+      "maxWaterTemperature",
+      "bleachAllowed",
+      "dryerAllowed",
+      "dryCleanAllowed"
+    ]
+  },
+  {
+    "caseId": "brown_pants_001",
+    "image": "brown_pants_001.png",
+    "labelImage": "brown_pants_001_label.png",
+    "verifiedBy": "label_image",
+    "groundTruth": {
+      "categoryName": "하의",
+      "waterWash": true,
+      "maxWaterTemperature": 40,
+      "bleachAllowed": false,
+      "dryerAllowed": false,
+      "ironAllowed": true,
+      "dryCleanAllowed": false,
+      "handWashRequired": false,
+      "separateWashRequired": true
+    },
+    "riskItems": [
+      "maxWaterTemperature",
+      "bleachAllowed",
+      "dryerAllowed",
+      "dryCleanAllowed"
+    ]
+  },
+  {
+    "caseId": "gray_tshirt_001",
+    "image": "gray_tshirt_001.png",
+    "labelImage": "gray_tshirt_001_label.png",
+    "verifiedBy": "label_image",
+    "groundTruth": {
+      "categoryName": "상의",
+      "waterWash": true,
+      "maxWaterTemperature": 40,
+      "bleachAllowed": false,
+      "dryerAllowed": false,
+      "ironAllowed": true,
+      "dryCleanAllowed": null,
+      "handWashRequired": false,
+      "separateWashRequired": true
+    },
+    "riskItems": [
+      "maxWaterTemperature",
+      "bleachAllowed",
+      "dryerAllowed"
+    ]
+  },
+  {
+    "caseId": "wine_jacket_001",
+    "image": "wine_jacket_001.png",
+    "labelImage": "wine_jacket_001_label.png",
+    "verifiedBy": "label_image",
+    "groundTruth": {
+      "categoryName": "아우터",
+      "waterWash": null,
+      "maxWaterTemperature": null,
+      "bleachAllowed": null,
+      "dryerAllowed": null,
+      "ironAllowed": null,
+      "dryCleanAllowed": null,
+      "handWashRequired": null,
+      "separateWashRequired": null
+    },
+    "riskItems": []
+  }
+]

@@ -1,0 +1,25 @@
+[
+  {
+    "caseId": "black_jacket_001",
+    "image": "black_jacket_001.png",
+    "labelImage": "black_jacket_001_label.png",
+    "verifiedBy": "label_image",
+    "groundTruth": {
+      "categoryName": "아우터",
+      "waterWash": true,
+      "maxWaterTemperature": 40,
+      "bleachAllowed": false,
+      "dryerAllowed": false,
+      "ironAllowed": true,
+      "dryCleanAllowed": false,
+      "handWashRequired": false,
+      "separateWashRequired": true
+    },
+    "riskItems": [
+      "maxWaterTemperature",
+      "bleachAllowed",
+      "dryerAllowed",
+      "dryCleanAllowed"
+    ]
+  }
+]

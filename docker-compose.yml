@@ -4,15 +4,21 @@ services:
     container_name: bbosong-mysql
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: bbosong-root-password
+      MYSQL_DATABASE: ai_laundry
+      MYSQL_USER: bbosong
+      MYSQL_PASSWORD: bbosong-password
     volumes:
       - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pbbosong-root-password"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   app:
-    image: taemin7878/bbosong-server:latest
+    build: .
+    image: bbosong-server:local
     container_name: bbosong-server
     restart: always
     ports:
@@ -20,11 +26,30 @@ services:
     env_file:
       - .env
     environment:
-      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8"
-      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+      SPRING_PROFILES_ACTIVE: local
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/ai_laundry?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8"
+      SPRING_DATASOURCE_USERNAME: bbosong
+      SPRING_DATASOURCE_PASSWORD: bbosong-password
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: 20MB
+      SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: 20MB
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
+
+  k6:
+    image: grafana/k6:0.55.0
+    profiles:
+      - tools
+    working_dir: /work/k6
+    environment:
+      BASE_URL: http://app:8080
+    volumes:
+      - .:/work:ro
+    entrypoint:
+      - k6
+    depends_on:
+      - app
 
 volumes:
   mysql-data:

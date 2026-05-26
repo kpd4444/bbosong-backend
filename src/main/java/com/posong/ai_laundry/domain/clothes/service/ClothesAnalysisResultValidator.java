@@ -15,7 +15,8 @@ public class ClothesAnalysisResultValidator {
 				|| isBlank(result.material())
 				|| isBlank(result.color())
 				|| isBlank(result.washingMethod())
-				|| isBlank(result.caution())) {
+				|| isBlank(result.caution())
+				|| result.washRules() == null) {
 			throw new GeneralException(ClothesErrorCode.INVALID_ANALYSIS_RESULT);
 		}
 	}

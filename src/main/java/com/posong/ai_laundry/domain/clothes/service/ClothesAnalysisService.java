@@ -67,7 +67,16 @@ public class ClothesAnalysisService {
 			  2~3문장으로 작성한다.
 			  수축, 이염, 형태 변형, 건조기 사용, 표백제 사용, 직사광선 건조 중 관련 있는 위험을 포함한다.
 			  위험만 나열하지 말고 피하는 방법도 함께 작성한다.
-
+			- washRules: 아래 구조로 세탁 관련 판단을 JSON object로 답한다.
+			  - waterWash: 물세탁 가능 여부를 true/false/null로 답한다.
+			  - maxWaterTemperature: 권장 최대 세탁 온도를 숫자로 답한다. 모르면 null로 답한다.
+			  - bleachAllowed: 표백제 사용 가능 여부를 true/false/null로 답한다.
+			  - dryerAllowed: 건조기 사용 가능 여부를 true/false/null로 답한다.
+			  - ironAllowed: 다림질 가능 여부를 true/false/null로 답한다.
+			  - dryCleanAllowed: 드라이클리닝 가능 여부를 true/false/null로 답한다.
+			  - handWashRequired: 손세탁 필요 여부를 true/false/null로 답한다.
+			  - separateWashRequired: 단독 세탁 필요 여부를 true/false/null로 답한다.
+			  사진만으로 확정할 수 없는 washRules 항목은 null로 답하고, 의류 손상이 우려되는 항목은 보수적으로 판단한다.
 			{format}
 			""";
 

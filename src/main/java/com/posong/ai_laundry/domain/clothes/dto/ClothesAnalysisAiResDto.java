@@ -3,7 +3,7 @@ package com.posong.ai_laundry.domain.clothes.dto;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-@JsonPropertyOrder({"categoryName", "name", "material", "color", "washingMethod", "caution"})
+@JsonPropertyOrder({"categoryName", "name", "material", "color", "washingMethod", "caution", "washRules"})
 public record ClothesAnalysisAiResDto(
 		@Schema(description = "AI가 분류한 의류 카테고리", example = "상의")
 		String categoryName,
@@ -21,6 +21,9 @@ public record ClothesAnalysisAiResDto(
 		String washingMethod,
 
 		@Schema(description = "세탁 시 주의사항", example = "건조기 사용은 피하고, 그늘에서 평평하게 건조하세요.")
-		String caution
+		String caution,
+
+		@Schema(description = "사진 기준으로 추정한 구조화 세탁 규칙")
+		ClothesWashRulesDto washRules
 ) {
 }
