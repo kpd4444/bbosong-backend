@@ -1,5 +1,7 @@
 package com.posong.ai_laundry.domain.clothes.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesDetailResDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesFavoriteReqDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesFavoriteResDto;
@@ -8,11 +10,15 @@ import com.posong.ai_laundry.domain.clothes.dto.ClothesSaveReqDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesSaveResDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesSummaryResDto;
 import com.posong.ai_laundry.domain.clothes.service.ClothesService;
+import com.posong.ai_laundry.global.error.code.GlobalErrorCode;
+import com.posong.ai_laundry.global.error.exception.GeneralException;
 import com.posong.ai_laundry.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Valid;
+import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -29,6 +35,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @Tag(name = "Clothes Closet", description = "의류 저장 및 옷장 조회 API")
@@ -37,6 +44,8 @@ import java.util.List;
 public class ClothesController {
 
 	private final ClothesService clothesService;
+	private final ObjectMapper objectMapper;
+	private final Validator validator;
 
 	@Operation(
 			summary = "의류 저장",
@@ -45,10 +54,24 @@ public class ClothesController {
 	@PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ApiResponse<ClothesSaveResDto> save(
 			@AuthenticationPrincipal Long memberId,
-			@Valid @RequestPart("request") ClothesSaveReqDto request,
+			@RequestPart("request") String request,
 			@RequestPart("image") MultipartFile image
 	) {
-		return ApiResponse.success(clothesService.save(memberId, request, image));
+		ClothesSaveReqDto parsedRequest = parseAndValidateSaveRequest(request);
+		return ApiResponse.success(clothesService.save(memberId, parsedRequest, image));
+	}
+
+	private ClothesSaveReqDto parseAndValidateSaveRequest(String request) {
+		try {
+			ClothesSaveReqDto parsedRequest = objectMapper.readValue(request, ClothesSaveReqDto.class);
+			Set<ConstraintViolation<ClothesSaveReqDto>> violations = validator.validate(parsedRequest);
+			if (!violations.isEmpty()) {
+				throw new GeneralException(GlobalErrorCode.INVALID_INPUT_VALUE);
+			}
+			return parsedRequest;
+		} catch (JsonProcessingException exception) {
+			throw new GeneralException(GlobalErrorCode.INVALID_INPUT_VALUE);
+		}
 	}
 
 	@Operation(

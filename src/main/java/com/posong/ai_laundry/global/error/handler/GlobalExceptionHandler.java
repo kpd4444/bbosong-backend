@@ -3,6 +3,7 @@ package com.posong.ai_laundry.global.error.handler;
 import com.posong.ai_laundry.global.response.ApiResponse;
 import com.posong.ai_laundry.global.error.code.GlobalErrorCode;
 import com.posong.ai_laundry.global.error.exception.GeneralException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -14,6 +15,7 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
  * 애플리케이션 전역에서 발생한 예외를 공통 API 응답 형식으로 변환한다.
  */
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
 	/**
@@ -52,6 +54,7 @@ public class GlobalExceptionHandler {
 	 */
 	@ExceptionHandler(Exception.class)
 	public ResponseEntity<ApiResponse<Void>> handleException(Exception exception) {
+		log.error("Unhandled exception occurred", exception);
 		return ResponseEntity
 				.status(GlobalErrorCode.INTERNAL_SERVER_ERROR.getStatus())
 				.body(ApiResponse.fail(GlobalErrorCode.INTERNAL_SERVER_ERROR));
