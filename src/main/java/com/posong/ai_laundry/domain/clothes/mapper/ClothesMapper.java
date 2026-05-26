@@ -8,12 +8,17 @@ import com.posong.ai_laundry.domain.clothes.dto.ClothesSummaryResDto;
 import com.posong.ai_laundry.domain.clothes.entity.Category;
 import com.posong.ai_laundry.domain.clothes.entity.Clothes;
 import com.posong.ai_laundry.domain.member.entity.Member;
+import com.posong.ai_laundry.global.storage.ImageUrlResolver;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class ClothesMapper {
 
-	public Clothes toClothes(Member member, Category category, ClothesSaveReqDto request) {
+	private final ImageUrlResolver imageUrlResolver;
+
+	public Clothes toClothes(Member member, Category category, ClothesSaveReqDto request, String imageKey) {
 		return Clothes.builder()
 				.member(member)
 				.category(category)
@@ -22,7 +27,7 @@ public class ClothesMapper {
 				.color(request.color())
 				.washingMethod(request.washingMethod())
 				.caution(request.caution())
-				.imageUrl(request.imageUrl())
+				.imageKey(imageKey)
 				.isFavorite(false)
 				.build();
 	}
@@ -42,7 +47,7 @@ public class ClothesMapper {
 				clothes.getCategory() == null ? null : clothes.getCategory().getName(),
 				clothes.getName(),
 				clothes.getColor(),
-				clothes.getImageUrl(),
+				imageUrlResolver.resolve(clothes.getImageKey()),
 				clothes.isFavorite(),
 				clothes.getCreatedAt()
 		);
@@ -57,7 +62,7 @@ public class ClothesMapper {
 				clothes.getColor(),
 				clothes.getWashingMethod(),
 				clothes.getCaution(),
-				clothes.getImageUrl(),
+				imageUrlResolver.resolve(clothes.getImageKey()),
 				clothes.isFavorite(),
 				clothes.getCreatedAt()
 		);
