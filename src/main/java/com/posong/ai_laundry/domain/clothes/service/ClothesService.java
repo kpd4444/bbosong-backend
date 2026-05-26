@@ -55,7 +55,7 @@ public class ClothesService {
 
 		String imageKey = imageStorageService.uploadClothesImage(image, imageMimeType);
 		try {
-			Clothes clothes = clothesRepository.save(clothesMapper.toClothes(member, category, request, imageKey));
+			Clothes clothes = clothesRepository.saveAndFlush(clothesMapper.toClothes(member, category, request, imageKey));
 			return clothesMapper.toClothesSaveResDto(clothes);
 		} catch (RuntimeException exception) {
 			imageStorageService.delete(imageKey);
