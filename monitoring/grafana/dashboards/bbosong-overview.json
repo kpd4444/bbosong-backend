@@ -18,7 +18,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": null,
+  "id": 2,
   "links": [],
   "panels": [
     {
@@ -180,8 +180,8 @@
       "gridPos": {
         "h": 8,
         "w": 8,
-        "x": 16,
-        "y": 8
+        "x": 0,
+        "y": 16
       },
       "id": 6,
       "targets": [
@@ -213,8 +213,8 @@
       "gridPos": {
         "h": 8,
         "w": 8,
-        "x": 0,
-        "y": 16
+        "x": 16,
+        "y": 8
       },
       "id": 7,
       "targets": [
@@ -228,6 +228,7 @@
       "type": "timeseries"
     }
   ],
+  "preload": false,
   "refresh": "5s",
   "schemaVersion": 40,
   "tags": [

@@ -39,7 +39,6 @@ public class SecurityConfig {
 								"/v3/api-docs.yaml",
 								"/actuator/health",
 								"/actuator/health/**",
-								"/actuator/prometheus",
 								"/api/auth/signup/local",
 								"/api/auth/login/local",
 								"/api/auth/reissue"
