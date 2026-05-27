@@ -16,7 +16,12 @@ public enum ClothesErrorCode implements BaseErrorCode {
 	CATEGORY_REQUIRED("CLOTHES_005", "의류 카테고리는 필수입니다.", HttpStatus.BAD_REQUEST),
 	INVALID_CATEGORY("CLOTHES_006", "지원하지 않는 의류 카테고리입니다.", HttpStatus.BAD_REQUEST),
 	CLOTHES_NOT_FOUND("CLOTHES_007", "의류 정보를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
-	FAVORITE_CONFLICT("CLOTHES_008", "즐겨찾기 상태 변경 중 충돌이 발생했습니다. 다시 시도해 주세요.", HttpStatus.CONFLICT);
+	FAVORITE_CONFLICT("CLOTHES_008", "즐겨찾기 상태 변경 중 충돌이 발생했습니다. 다시 시도해 주세요.", HttpStatus.CONFLICT),
+	CLOTHES_ANALYSIS_QUEUE_TIMEOUT(
+			"CLOTHES_009",
+			"의류 분석 요청이 많아 대기 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.",
+			HttpStatus.TOO_MANY_REQUESTS
+	);
 
 	private final String code;
 	private final String message;

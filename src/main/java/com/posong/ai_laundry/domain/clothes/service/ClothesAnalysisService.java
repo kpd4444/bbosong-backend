@@ -92,6 +92,7 @@ public class ClothesAnalysisService {
 	private final ExternalApiCircuitBreaker externalApiCircuitBreaker;
 	private final OpenAiChatOptionsFactory openAiChatOptionsFactory;
 	private final ClothesAnalysisResultValidator clothesAnalysisResultValidator;
+	private final ClothesAnalysisConcurrencyLimiter clothesAnalysisConcurrencyLimiter;
 	private final MeterRegistry meterRegistry;
 
 	@Value("${external-api.openai.call-timeout:60s}")
@@ -112,6 +113,13 @@ public class ClothesAnalysisService {
 				.media(new Media(imageMimeType, image.getResource()))
 				.build();
 
+		return clothesAnalysisConcurrencyLimiter.execute(() -> analyzeWithOpenAi(userMessage, outputConverter));
+	}
+
+	private ClothesAnalysisResDto analyzeWithOpenAi(
+			UserMessage userMessage,
+			BeanOutputConverter<ClothesAnalysisAiResDto> outputConverter
+	) {
 		Timer.Sample openAiTimer = Timer.start(meterRegistry);
 		try {
 			String responseText = externalApiCircuitBreaker.execute(OPENAI_CIRCUIT, openAiCallTimeout, () ->

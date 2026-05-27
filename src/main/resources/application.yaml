@@ -1,18 +1,22 @@
 spring:
-  application:
-    name: ai-laundry
-  profiles:
-    default: local
-  servlet:
-    multipart:
-      max-file-size: 20MB
-      max-request-size: 22MB
+  datasource:
+    url: jdbc:mysql://localhost:3306/ai_laundry?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username:
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        show_sql: true
   ai:
     openai:
-      api-key: ${OPENAI_API_KEY}
+      api-key: ${OPENAI_API_KEY:}
       chat:
         options:
-          model: ${OPENAI_MODEL:gpt-4o-mini}
+          model: ${OPENAI_MODEL:gpt-5-mini}
   security:
     oauth2:
       client:
@@ -22,42 +26,49 @@ spring:
             token-uri: https://kauth.kakao.com/oauth/token
             user-info-uri: https://kapi.kakao.com/v2/user/me
             user-name-attribute: id
-
-springdoc:
-  swagger-ui:
-    path: /swagger-ui.html
-    display-request-duration: true
-    groups-order: desc
-    operations-sorter: method
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:}
+            client-secret: ${GOOGLE_CLIENT_SECRET:}
+            scope:
+              - profile
+              - email
+          kakao:
+            client-id: ${KAKAO_CLIENT_ID:}
+            client-secret: ${KAKAO_CLIENT_SECRET:}
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope:
+              - profile_nickname
+              - account_email
+            client-name: Kakao
 
 jwt:
-  secret: ${JWT_SECRET}
-  access-token-expiration-seconds: ${JWT_ACCESS_TOKEN_EXPIRATION_SECONDS:1800}
-  refresh-token-expiration-seconds: ${JWT_REFRESH_TOKEN_EXPIRATION_SECONDS:1209600}
+  secret: ${JWT_SECRET:}
+  access-token-expiration-seconds: ${JWT_ACCESS_TOKEN_EXPIRATION_SECONDS:}
+  refresh-token-expiration-seconds: ${JWT_REFRESH_TOKEN_EXPIRATION_SECONDS:}
+
+app:
+  oauth2:
+    success-redirect-uri: ${OAUTH2_SUCCESS_REDIRECT_URI:}
 
 weather:
   kma:
-    service-key: ${KMA_SERVICE_KEY}
-    endpoint: https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0
-
-external-api:
-  circuit-breaker:
-    failure-threshold: 3
-    open-duration: 30s
-    timeout-thread-limit: 8
-  kma:
-    connect-timeout: 3s
-    read-timeout: 10s
-  openai:
-    call-timeout: 60s
-    temperature: 0.2
+    service-key: ${KMA_SERVICE_KEY:}
 
 aws:
-  region: ${AWS_REGION:ap-northeast-2}
+  region: ${AWS_REGION:}
   s3:
-    bucket: ${AWS_S3_BUCKET}
+    bucket: ${AWS_S3_BUCKET:}
   cloudfront:
-    domain: ${AWS_CLOUDFRONT_DOMAIN}
+    domain: ${AWS_CLOUDFRONT_DOMAIN:}
+
+clothes:
+  analysis:
+    concurrency:
+      max-active: ${CLOTHES_ANALYSIS_MAX_ACTIVE:5}
+      queue-timeout: ${CLOTHES_ANALYSIS_QUEUE_TIMEOUT:60s}
 
 management:
   endpoints:
@@ -71,7 +82,7 @@ management:
       show-details: when_authorized
   metrics:
     tags:
-      application: ${spring.application.name}
+      application: ai-laundry
     distribution:
       percentiles-histogram:
         http.server.requests: true
