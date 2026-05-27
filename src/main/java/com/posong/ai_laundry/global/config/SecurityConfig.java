@@ -74,6 +74,7 @@ public class SecurityConfig {
 				"http://localhost:3000",
 				"http://localhost:8080",
 				"https://bbosongi.com",
+				"https://www.bbosongi.com",
 				"https://api.bbosongi.com"
 		));
 		configuration.setAllowedMethods(List.of("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"));
