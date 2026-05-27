@@ -1,10 +1,6 @@
 spring:
   application:
     name: ai-laundry
-  servlet:
-    multipart:
-      max-file-size: 20MB
-      max-request-size: 20MB
   profiles:
     default: local
   servlet:
@@ -16,7 +12,7 @@ spring:
       api-key: ${OPENAI_API_KEY}
       chat:
         options:
-          model: ${OPENAI_MODEL}
+          model: ${OPENAI_MODEL:gpt-4o-mini}
   security:
     oauth2:
       client:
@@ -62,3 +58,24 @@ aws:
     bucket: ${AWS_S3_BUCKET}
   cloudfront:
     domain: ${AWS_CLOUDFRONT_DOMAIN}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when_authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+        clothes.analysis.openai: true
+      percentiles:
+        http.server.requests: 0.5,0.95,0.99
+        clothes.analysis.openai: 0.5,0.95,0.99

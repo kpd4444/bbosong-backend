@@ -11,6 +11,8 @@ import com.posong.ai_laundry.global.file.ImageFileValidator;
 import com.posong.ai_laundry.global.resilience.ExternalApiCallTimeoutException;
 import com.posong.ai_laundry.global.resilience.ExternalApiCircuitBreaker;
 import com.posong.ai_laundry.global.resilience.ExternalApiCircuitOpenException;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.UserMessage;
@@ -24,6 +26,7 @@ import org.springframework.util.MimeType;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Duration;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +34,11 @@ import java.time.Duration;
 public class ClothesAnalysisService {
 
 	private static final String OPENAI_CIRCUIT = "openai";
+	private static final Set<String> EXPECTED_OPENAI_EXCEPTIONS = Set.of(
+			"GeneralException",
+			"ExternalApiCircuitOpenException",
+			"ExternalApiCallTimeoutException"
+	);
 
 	private static final String ANALYSIS_PROMPT = """
 			너는 의류 이미지 분석 전문가다.
@@ -84,9 +92,13 @@ public class ClothesAnalysisService {
 	private final ExternalApiCircuitBreaker externalApiCircuitBreaker;
 	private final OpenAiChatOptionsFactory openAiChatOptionsFactory;
 	private final ClothesAnalysisResultValidator clothesAnalysisResultValidator;
+	private final MeterRegistry meterRegistry;
 
 	@Value("${external-api.openai.call-timeout:60s}")
 	private Duration openAiCallTimeout;
+
+	@Value("${spring.ai.openai.chat.options.model:gpt-4o-mini}")
+	private String openAiModel;
 
 	public ClothesAnalysisResDto analyze(MultipartFile image) {
 		MimeType imageMimeType = validateAndResolveImage(image);
@@ -100,6 +112,7 @@ public class ClothesAnalysisService {
 				.media(new Media(imageMimeType, image.getResource()))
 				.build();
 
+		Timer.Sample openAiTimer = Timer.start(meterRegistry);
 		try {
 			String responseText = externalApiCircuitBreaker.execute(OPENAI_CIRCUIT, openAiCallTimeout, () ->
 					chatModel.call(new Prompt(userMessage, openAiChatOptionsFactory.create()))
@@ -112,16 +125,39 @@ public class ClothesAnalysisService {
 					ClothesAnalysisResponseNormalizer.normalize(responseText)
 			);
 			clothesAnalysisResultValidator.validate(result);
+			recordOpenAiTimer(openAiTimer, "success", null);
 			return ClothesAnalysisResDto.from(result);
 		} catch (ExternalApiCircuitOpenException | ExternalApiCallTimeoutException exception) {
+			recordOpenAiTimer(openAiTimer, "failure", exception.getClass().getSimpleName());
 			log.warn("OpenAI clothes analysis failed by circuit breaker or timeout", exception);
 			throw new GeneralException(ClothesErrorCode.CLOTHES_ANALYSIS_FAILED);
 		} catch (GeneralException exception) {
+			recordOpenAiTimer(openAiTimer, "failure", exception.getClass().getSimpleName());
 			throw exception;
 		} catch (Exception exception) {
+			recordOpenAiTimer(openAiTimer, "failure", exception.getClass().getSimpleName());
 			log.warn("Failed to analyze clothes image", exception);
 			throw new GeneralException(ClothesErrorCode.CLOTHES_ANALYSIS_FAILED);
 		}
+	}
+
+	private void recordOpenAiTimer(Timer.Sample sample, String outcome, String exception) {
+		sample.stop(Timer.builder("clothes.analysis.openai")
+				.description("OpenAI latency for clothes image analysis")
+				.tag("model", openAiModel)
+				.tag("outcome", outcome)
+				.tag("exception", exceptionBucket(exception))
+				.register(meterRegistry));
+	}
+
+	private String exceptionBucket(String exception) {
+		if (exception == null || exception.isBlank()) {
+			return "none";
+		}
+		if (EXPECTED_OPENAI_EXCEPTIONS.contains(exception)) {
+			return "general";
+		}
+		return "unexpected";
 	}
 
 	private MimeType validateAndResolveImage(MultipartFile image) {

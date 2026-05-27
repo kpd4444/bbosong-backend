@@ -74,18 +74,31 @@ The current repository is a single Spring Boot application. A true security-serv
 
 ## Local Run
 
-Start app:
+Start app and monitoring:
 
 ```bash
-docker compose up -d app
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
 ```
 
-If `.env` is not present, create it first because the existing app compose file requires DB, JWT, and OpenAI values.
+If `.env` is not present, create it first because the existing app compose file requires DB, JWT, OpenAI, and Grafana credential values.
 
 The k6 compose service uses the Docker Compose service DNS name:
 
 ```text
 BASE_URL=http://app:8080
+```
+
+The default Prometheus config is for Docker Compose and scrapes:
+
+```text
+host.docker.internal:8080
+```
+
+Open:
+
+```text
+Prometheus: http://localhost:9090
+Grafana:    http://localhost:3000
 ```
 
 Run baseline:
@@ -110,6 +123,12 @@ Run verification:
 
 ```bash
 docker compose run --rm k6 run verify.js
+```
+
+Run accuracy smoke test:
+
+```bash
+docker compose run --rm -e K6_EXPECTED_PATH=tests/fixtures/expected-reliable.json -e K6_ACCURACY_ITERATIONS=1 k6 run accuracy.js
 ```
 
 ## Swarm Demo
