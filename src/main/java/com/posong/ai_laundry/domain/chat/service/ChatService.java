@@ -40,6 +40,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -49,6 +50,8 @@ public class ChatService {
 
 	private static final String OPENAI_CIRCUIT = "openai";
 	private static final int MAX_CONTEXT_MESSAGES = 40;
+	private static final Pattern MARKDOWN_HEADING_PREFIX = Pattern.compile("(?m)^#{1,6}\\s*");
+	private static final Pattern MARKDOWN_BOLD_MARKER = Pattern.compile("\\*\\*");
 
 	private static final String SYSTEM_PROMPT = """
 			너는 의류 관리 상담을 돕는 AI다.
@@ -65,11 +68,17 @@ public class ChatService {
 
 			답변 구성:
 			- 질문이 간단하면 2~4문장으로 간결하게 답한다.
+			- 첫 줄에는 핵심 결론을 1문장으로 말한다.
+			- 이어서 빈 줄을 한 번 넣고, 필요한 경우 1~4개의 번호 목록으로 정리한다.
+			- 각 번호 항목은 1~2문장으로 짧게 작성한다.
+			- 한 문단은 2문장을 넘기지 않는다.
 			- 세탁 방법을 묻는 경우 물 온도, 세탁 코스, 세제, 단독 세탁 여부를 포함한다.
 			- 건조 방법을 묻는 경우 건조기 사용 가능성, 그늘 건조, 형태 유지 방법을 포함한다.
 			- 얼룩 제거를 묻는 경우 문지르기보다 두드려 제거하고, 눈에 띄지 않는 부분에 먼저 테스트하라고 안내한다.
 			- 이미지가 첨부되었지만 판단이 어려우면 추정 가능한 부분과 확인이 필요한 부분을 나누어 말한다.
 			- 불필요한 자기소개, 장황한 설명, 마크다운 표는 사용하지 않는다.
+			- 마크다운 제목(###), 굵게 표시(**), 코드블록, 표는 사용하지 않는다.
+			- 번호 목록은 "1. 내용" 형식의 일반 텍스트만 사용한다.
 			""";
 
 	private static final String IMAGE_ONLY_PLACEHOLDER = "[이미지 첨부]";
@@ -188,7 +197,18 @@ public class ChatService {
 			throw new GeneralException(ChatErrorCode.CHAT_RESPONSE_FAILED);
 		}
 
-		return responseText.trim();
+		return formatAssistantAnswer(responseText);
+	}
+
+	private String formatAssistantAnswer(String responseText) {
+		String formattedText = responseText
+				.replace("\r\n", "\n")
+				.replace("\r", "\n")
+				.trim();
+
+		formattedText = MARKDOWN_HEADING_PREFIX.matcher(formattedText).replaceAll("");
+		formattedText = MARKDOWN_BOLD_MARKER.matcher(formattedText).replaceAll("");
+		return formattedText.replaceAll("\\n{3,}", "\n\n");
 	}
 
 	private UserMessage buildCurrentUserMessage(String content, MultipartFile image, MimeType imageMimeType) {
