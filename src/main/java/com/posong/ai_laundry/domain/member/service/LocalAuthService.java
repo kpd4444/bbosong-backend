@@ -9,7 +9,9 @@ import com.posong.ai_laundry.domain.member.dto.LocalLoginReqDto;
 import com.posong.ai_laundry.domain.member.dto.LocalLoginResDto;
 import com.posong.ai_laundry.domain.member.dto.LocalSignUpReqDto;
 import com.posong.ai_laundry.domain.member.dto.LocalSignUpResDto;
+import com.posong.ai_laundry.domain.member.dto.MemberBirthUpdateReqDto;
 import com.posong.ai_laundry.domain.member.dto.MemberProfileResDto;
+import com.posong.ai_laundry.domain.member.dto.MemberNicknameUpdateReqDto;
 import com.posong.ai_laundry.domain.member.dto.TokenReissueReqDto;
 import com.posong.ai_laundry.domain.member.dto.TokenReissueResDto;
 import com.posong.ai_laundry.domain.member.entity.LocalAccount;
@@ -119,6 +121,29 @@ public class LocalAuthService {
 		Member member = memberRepository.findById(memberId)
 				.orElseThrow(() -> new GeneralException(MemberErrorCode.MEMBER_NOT_FOUND));
 
+		return memberMapper.toMemberProfileResDto(member);
+	}
+
+	@Transactional
+	public MemberProfileResDto updateNickname(Long memberId, MemberNicknameUpdateReqDto request) {
+		Member member = memberRepository.findById(memberId)
+				.orElseThrow(() -> new GeneralException(MemberErrorCode.MEMBER_NOT_FOUND));
+		String nickname = request.nickname().trim();
+
+		if (memberRepository.existsByNicknameAndMemberIdNot(nickname, memberId)) {
+			throw new GeneralException(MemberErrorCode.DUPLICATE_NICKNAME);
+		}
+
+		member.updateNickname(nickname);
+		return memberMapper.toMemberProfileResDto(member);
+	}
+
+	@Transactional
+	public MemberProfileResDto updateBirth(Long memberId, MemberBirthUpdateReqDto request) {
+		Member member = memberRepository.findById(memberId)
+				.orElseThrow(() -> new GeneralException(MemberErrorCode.MEMBER_NOT_FOUND));
+
+		member.updateBirth(request.birthDate());
 		return memberMapper.toMemberProfileResDto(member);
 	}
 
