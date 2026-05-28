@@ -5,6 +5,8 @@ import com.posong.ai_laundry.domain.member.dto.LocalLoginReqDto;
 import com.posong.ai_laundry.domain.member.dto.LocalLoginResDto;
 import com.posong.ai_laundry.domain.member.dto.LocalSignUpReqDto;
 import com.posong.ai_laundry.domain.member.dto.LocalSignUpResDto;
+import com.posong.ai_laundry.domain.member.dto.MemberBirthUpdateReqDto;
+import com.posong.ai_laundry.domain.member.dto.MemberNicknameUpdateReqDto;
 import com.posong.ai_laundry.domain.member.dto.MemberProfileResDto;
 import com.posong.ai_laundry.domain.member.dto.TokenReissueReqDto;
 import com.posong.ai_laundry.domain.member.dto.TokenReissueResDto;
@@ -17,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -66,6 +69,24 @@ public class LocalAuthController {
 	@GetMapping("/members/me")
 	public ApiResponse<MemberProfileResDto> getMyProfile(@AuthenticationPrincipal Long memberId) {
 		return ApiResponse.success(localAuthService.getMyProfile(memberId));
+	}
+
+	@Operation(summary = "Update nickname", description = "Changes the authenticated member's nickname.")
+	@PatchMapping("/members/me/nickname")
+	public ApiResponse<MemberProfileResDto> updateNickname(
+			@AuthenticationPrincipal Long memberId,
+			@Valid @RequestBody MemberNicknameUpdateReqDto request
+	) {
+		return ApiResponse.success(localAuthService.updateNickname(memberId, request));
+	}
+
+	@Operation(summary = "Update birth", description = "Changes the authenticated member's birth date.")
+	@PatchMapping("/members/me/birth-date")
+	public ApiResponse<MemberProfileResDto> updateBirth(
+			@AuthenticationPrincipal Long memberId,
+			@Valid @RequestBody MemberBirthUpdateReqDto request
+	) {
+		return ApiResponse.success(localAuthService.updateBirth(memberId, request));
 	}
 
 	@Operation(summary = "Withdraw member", description = "Deletes the authenticated member and related data.")

@@ -59,4 +59,12 @@ public class Member {
 	void onUpdate() {
 		updatedAt = LocalDateTime.now();
 	}
+
+	public void updateNickname(String nickname) {
+		this.nickname = nickname;
+	}
+
+	public void updateBirth(LocalDate birth) {
+		this.birth = birth;
+	}
 }

@@ -5,6 +5,8 @@ import com.posong.ai_laundry.domain.member.dto.LocalLoginIdCheckResDto;
 import com.posong.ai_laundry.domain.member.dto.LocalLoginResDto;
 import com.posong.ai_laundry.domain.member.dto.LocalSignUpReqDto;
 import com.posong.ai_laundry.domain.member.dto.LocalSignUpResDto;
+import com.posong.ai_laundry.domain.member.dto.MemberBirthUpdateReqDto;
+import com.posong.ai_laundry.domain.member.dto.MemberNicknameUpdateReqDto;
 import com.posong.ai_laundry.domain.member.dto.MemberProfileResDto;
 import com.posong.ai_laundry.domain.member.dto.TokenReissueReqDto;
 import com.posong.ai_laundry.domain.member.dto.TokenReissueResDto;
@@ -23,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -145,6 +148,73 @@ class LocalAuthServiceTest {
 		assertThat(duplicatedResponse.loginId()).isEqualTo(loginId);
 		assertThat(duplicatedResponse.available()).isFalse();
 		assertThat(duplicatedResponse.duplicated()).isTrue();
+	}
+
+	@Test
+	void updateNicknameChangesMyProfile() {
+		String uniqueSuffix = UUID.randomUUID().toString().substring(0, 8);
+		LocalSignUpResDto signUpResponse = localAuthService.signUp(
+				new LocalSignUpReqDto(
+						"bbosong-nickname-" + uniqueSuffix,
+						"password1234",
+						"bbosong-nickname-" + uniqueSuffix + "@example.com"
+				)
+		);
+		String newNickname = "new-nickname-" + uniqueSuffix;
+
+		MemberProfileResDto response = localAuthService.updateNickname(
+				signUpResponse.memberId(),
+				new MemberNicknameUpdateReqDto(newNickname)
+		);
+
+		assertThat(response.nickname()).isEqualTo(newNickname);
+		assertThat(localAuthService.getMyProfile(signUpResponse.memberId()).nickname()).isEqualTo(newNickname);
+	}
+
+	@Test
+	void updateNicknameRejectsDuplicateNickname() {
+		String uniqueSuffix = UUID.randomUUID().toString().substring(0, 8);
+		LocalSignUpResDto firstMember = localAuthService.signUp(
+				new LocalSignUpReqDto(
+						"bbosong-first-" + uniqueSuffix,
+						"password1234",
+						"bbosong-first-" + uniqueSuffix + "@example.com"
+				)
+		);
+		LocalSignUpResDto secondMember = localAuthService.signUp(
+				new LocalSignUpReqDto(
+						"bbosong-second-" + uniqueSuffix,
+						"password1234",
+						"bbosong-second-" + uniqueSuffix + "@example.com"
+				)
+		);
+
+		assertThatThrownBy(() -> localAuthService.updateNickname(
+				secondMember.memberId(),
+				new MemberNicknameUpdateReqDto(firstMember.loginId())
+		)).isInstanceOfSatisfying(GeneralException.class, exception ->
+				assertThat(exception.getErrorCode()).isEqualTo(MemberErrorCode.DUPLICATE_NICKNAME));
+	}
+
+	@Test
+	void updateBirthChangesMyProfile() {
+		String uniqueSuffix = UUID.randomUUID().toString().substring(0, 8);
+		LocalSignUpResDto signUpResponse = localAuthService.signUp(
+				new LocalSignUpReqDto(
+						"bbosong-birth-" + uniqueSuffix,
+						"password1234",
+						"bbosong-birth-" + uniqueSuffix + "@example.com"
+				)
+		);
+		LocalDate birth = LocalDate.of(2001, 5, 20);
+
+		MemberProfileResDto response = localAuthService.updateBirth(
+				signUpResponse.memberId(),
+				new MemberBirthUpdateReqDto(birth)
+		);
+
+		assertThat(response.birth()).isEqualTo(birth);
+		assertThat(localAuthService.getMyProfile(signUpResponse.memberId()).birth()).isEqualTo(birth);
 	}
 
 	@Test
