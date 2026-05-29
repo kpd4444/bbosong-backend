@@ -19,6 +19,8 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.content.Media;
 import org.springframework.ai.converter.BeanOutputConverter;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.MimeType;
 import org.springframework.web.multipart.MultipartFile;
@@ -81,14 +83,27 @@ public class ClothesAnalysisService {
 
 	public ClothesAnalysisResDto analyze(MultipartFile image) {
 		MimeType imageMimeType = validateAndResolveImage(image);
+		return analyze(image.getResource(), imageMimeType);
+	}
 
+	public ClothesAnalysisResDto analyze(byte[] imageData, MimeType imageMimeType) {
+		ByteArrayResource imageResource = new ByteArrayResource(imageData) {
+			@Override
+			public String getFilename() {
+				return "clothes-analysis-image";
+			}
+		};
+		return analyze(imageResource, imageMimeType);
+	}
+
+	private ClothesAnalysisResDto analyze(Resource imageResource, MimeType imageMimeType) {
 		BeanOutputConverter<ClothesAnalysisAiResDto> outputConverter =
 				new BeanOutputConverter<>(ClothesAnalysisAiResDto.class);
 
 		String promptText = ANALYSIS_PROMPT.formatted(outputConverter.getFormat());
 		UserMessage userMessage = UserMessage.builder()
 				.text(promptText)
-				.media(new Media(imageMimeType, image.getResource()))
+				.media(new Media(imageMimeType, imageResource))
 				.build();
 
 		try {

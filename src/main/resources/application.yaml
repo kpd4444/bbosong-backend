@@ -44,13 +44,16 @@ external-api:
   circuit-breaker:
     failure-threshold: 3
     open-duration: 30s
-    timeout-thread-limit: 8
+    timeout-thread-limit: 10
   kma:
     connect-timeout: 3s
     read-timeout: 10s
   openai:
     call-timeout: 60s
     temperature: 0.2
+    analysis-executor:
+      thread-limit: 10
+      queue-capacity: 50
 
 aws:
   region: ${AWS_REGION:ap-northeast-2}
