@@ -87,6 +87,13 @@ public class ClothesAnalysisService {
 	}
 
 	public ClothesAnalysisResDto analyze(byte[] imageData, MimeType imageMimeType) {
+		if (imageData == null || imageData.length == 0) {
+			throw new GeneralException(ClothesErrorCode.IMAGE_REQUIRED);
+		}
+		if (imageMimeType == null) {
+			throw new GeneralException(ClothesErrorCode.INVALID_IMAGE_TYPE);
+		}
+
 		ByteArrayResource imageResource = new ByteArrayResource(imageData) {
 			@Override
 			public String getFilename() {

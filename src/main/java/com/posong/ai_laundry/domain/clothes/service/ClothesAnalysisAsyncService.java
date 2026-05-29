@@ -88,12 +88,6 @@ public class ClothesAnalysisAsyncService {
 
 	@EventListener(ApplicationReadyEvent.class)
 	public void recoverUnfinishedJobs() {
-		transactionTemplate.executeWithoutResult(status -> {
-			List<ClothesAnalysisJob> processingJobs =
-					clothesAnalysisJobRepository.findAllByStatus(ClothesAnalysisJobStatus.PROCESSING);
-			processingJobs.forEach(job -> job.fail("Server restarted while processing this job."));
-		});
-
 		List<Long> pendingJobIds = Objects.requireNonNull(transactionTemplate.execute(status ->
 				clothesAnalysisJobRepository.findAllByStatus(ClothesAnalysisJobStatus.PENDING)
 						.stream()
