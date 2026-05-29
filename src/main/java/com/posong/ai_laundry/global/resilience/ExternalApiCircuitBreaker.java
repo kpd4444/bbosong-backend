@@ -34,13 +34,13 @@ public class ExternalApiCircuitBreaker {
 	public ExternalApiCircuitBreaker(
 			@Value("${external-api.circuit-breaker.failure-threshold:3}") int failureThreshold,
 			@Value("${external-api.circuit-breaker.open-duration:30s}") Duration openDuration,
-			@Value("${external-api.circuit-breaker.timeout-thread-limit:8}") int timeoutThreadLimit
+			@Value("${external-api.circuit-breaker.timeout-thread-limit:10}") int timeoutThreadLimit
 	) {
 		this(failureThreshold, openDuration, Clock.systemUTC(), timeoutThreadLimit);
 	}
 
 	ExternalApiCircuitBreaker(int failureThreshold, Duration openDuration, Clock clock) {
-		this(failureThreshold, openDuration, clock, 8);
+		this(failureThreshold, openDuration, clock, 10);
 	}
 
 	ExternalApiCircuitBreaker(int failureThreshold, Duration openDuration, Clock clock, int timeoutThreadLimit) {
@@ -61,7 +61,7 @@ public class ExternalApiCircuitBreaker {
 		this.openDuration = openDuration;
 		this.clock = clock;
 		this.timeoutExecutor = new ThreadPoolExecutor(
-				0,
+				timeoutThreadLimit,
 				timeoutThreadLimit,
 				30L,
 				TimeUnit.SECONDS,
