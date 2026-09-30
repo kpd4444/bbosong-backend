@@ -178,8 +178,8 @@
 | **이름** | **역할** | **담당 업무** |
 |:--------:|:--------:|:-------------|
 | <a href="https://github.com/kpd4444"><img src="https://github.com/kpd4444.png" width="70px"/><br/><sub><b>김태민</b></sub></a> | BE· Leader | 백엔드 아키텍처 설계, 회원·JWT/OAuth2 인증, AI 의류 분석 및 상담, 디지털 옷장, 날씨 기반 추천, AWS 인프라·CI/CD 구축 |
-| <a href="https://github.com/hxxneei"><img src="https://github.com/hxxneei.png" width="70px"/><br/><sub><b>정지인</b></sub></a> | BE | Kakao 지도 API 연동, 서비스 모니터링, 동시 요청 처리 성능 테스트 |
-| <a href="https://github.com/jiin-jung"><img src="https://github.com/jiin-jung.png" width="70px"/><br/><sub><b>나현지</b></sub></a> | FE | 프론트엔드 구현, UI/UX 설계 및 API 연동 |
+| <a href="https://github.com/jiin-jung"><img src="https://github.com/hxxneei.png" width="70px"/><br/><sub><b>정지인</b></sub></a> | BE | Kakao 지도 API 연동, 서비스 모니터링, 동시 요청 처리 성능 테스트 |
+| <a href="https://github.com/hxxneei"><img src="https://github.com/jiin-jung.png" width="70px"/><br/><sub><b>나현지</b></sub></a> | FE | 프론트엔드 구현, UI/UX 설계 및 API 연동 |
 
 ---
 
