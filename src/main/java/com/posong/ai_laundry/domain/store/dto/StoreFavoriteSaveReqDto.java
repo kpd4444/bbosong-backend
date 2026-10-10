@@ -5,6 +5,7 @@ import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
@@ -40,7 +41,9 @@ public record StoreFavoriteSaveReqDto(
 		@DecimalMax(value = "180.0", message = "경도는 180 이하여야 합니다.")
 		BigDecimal longitude,
 
-		@Schema(description = "카카오 장소 URL", example = "https://place.map.kakao.com/123456789")
+		@Schema(description = "카카오 장소 URL (선택, http(s)://place.map.kakao.com/숫자ID 형식)", example = "https://place.map.kakao.com/123456789")
+		@Pattern(regexp = "(?:https?://place\\.map\\.kakao\\.com/[0-9]+)?",
+				message = "카카오 장소 URL은 http(s)://place.map.kakao.com/숫자ID 형식이어야 합니다.")
 		@Size(max = 500, message = "카카오 장소 URL은 500자를 초과할 수 없습니다.")
 		String placeUrl
 ) {

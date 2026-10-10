@@ -13,10 +13,13 @@ import com.posong.ai_laundry.domain.store.repository.StoreRepository;
 import com.posong.ai_laundry.global.error.exception.GeneralException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -26,7 +29,10 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,6 +52,62 @@ class StoreFavoriteServiceTest {
 
 	@InjectMocks
 	private StoreFavoriteService storeFavoriteService;
+
+	@ParameterizedTest
+	@ValueSource(booleans = {false, true})
+	void saveFavoritePreservesSharedStoreDetailsForAnotherMember(boolean foundAfterCreationConflict) {
+		Store existingStore = Store.builder()
+				.kakaoPlaceId("123456789").name("Original laundry").address("Original address")
+				.phone("02-123-4567").latitude(new BigDecimal("37.5"))
+				.longitude(new BigDecimal("127.0"))
+				.placeUrl("https://place.map.kakao.com/123456789").build();
+		Member firstMember = Member.builder().nickname("first").build();
+		StoreFavorite originalFavorite = StoreFavorite.builder().member(firstMember).store(existingStore).build();
+		Member secondMember = Member.builder().nickname("second").build();
+		StoreFavoriteSaveReqDto request = new StoreFavoriteSaveReqDto(
+				"123456789", "Changed name", "Changed address", "010-0000-0000",
+				new BigDecimal("35.0"), new BigDecimal("129.0"), "https://place.map.kakao.com/999");
+		when(memberRepository.findById(2L)).thenReturn(Optional.of(secondMember));
+		if (foundAfterCreationConflict) {
+			// Covers the fallback's data handling, not real database transaction recovery.
+			when(storeRepository.findByKakaoPlaceId(request.kakaoPlaceId()))
+					.thenReturn(Optional.empty()).thenReturn(Optional.of(existingStore));
+			when(storeRepository.save(any(Store.class)))
+					.thenThrow(new DataIntegrityViolationException("duplicate place"));
+		} else {
+			when(storeRepository.findByKakaoPlaceId(request.kakaoPlaceId())).thenReturn(Optional.of(existingStore));
+		}
+		when(storeFavoriteRepository.saveAndFlush(any(StoreFavorite.class)))
+				.thenAnswer(invocation -> invocation.getArgument(0));
+
+		StoreFavoriteResDto result = storeFavoriteService.saveFavorite(2L, request);
+
+		assertThat(result.name()).isEqualTo("Original laundry");
+		assertThat(result.address()).isEqualTo("Original address");
+		assertThat(result.phone()).isEqualTo("02-123-4567");
+		assertThat(result.latitude()).isEqualByComparingTo("37.5");
+		assertThat(result.longitude()).isEqualByComparingTo("127.0");
+		assertThat(result.placeUrl()).isEqualTo("https://place.map.kakao.com/123456789");
+		assertThat(originalFavorite.getStore()).isSameAs(existingStore);
+		assertThat(originalFavorite.getStore().getName()).isEqualTo("Original laundry");
+		if (!foundAfterCreationConflict) {
+			verify(storeRepository, never()).save(any(Store.class));
+		}
+		verify(storeFavoriteRepository).saveAndFlush(argThat(
+				favorite -> favorite.getMember() == secondMember && favorite.getStore() == existingStore));
+	}
+
+	@Test
+	void deleteFavoriteDeletesOnlyTheMembersFavorite() {
+		StoreFavorite favorite = mock(StoreFavorite.class);
+		when(storeFavoriteRepository.findByMember_MemberIdAndStore_StoreId(1L, 10L))
+				.thenReturn(Optional.of(favorite));
+
+		storeFavoriteService.deleteFavorite(1L, 10L);
+
+		verify(storeFavoriteRepository).delete(favorite);
+		verify(storeRepository, never()).delete(any(Store.class));
+	}
 
 	@Test
 	void saveFavoriteCreatesMemberFavorite() {
