@@ -40,7 +40,6 @@ public class StoreFavoriteService {
 				});
 
 		Store store = storeRepository.findByKakaoPlaceId(request.kakaoPlaceId())
-				.map(existingStore -> syncStore(existingStore, request))
 				.orElseGet(() -> createStoreSafely(request));
 
 		try {
@@ -79,20 +78,8 @@ public class StoreFavoriteService {
 			return storeRepository.save(storeFavoriteMapper.toStore(request));
 		} catch (DataIntegrityViolationException exception) {
 			return storeRepository.findByKakaoPlaceId(request.kakaoPlaceId())
-					.map(existingStore -> syncStore(existingStore, request))
 					.orElseThrow(() -> exception);
 		}
 	}
 
-	private Store syncStore(Store store, StoreFavoriteSaveReqDto request) {
-		store.updateDetails(
-				request.name(),
-				request.address(),
-				request.phone(),
-				request.latitude(),
-				request.longitude(),
-				request.placeUrl()
-		);
-		return store;
-	}
 }
