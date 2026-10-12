@@ -1,7 +1,6 @@
 # 세탁 메이트 뽀송이 - AI 의류 관리 서비스
 
 <div align="center">
-  <h1>뽀송이 - 옷을 오래도록 뽀송하게</h1>
   <p>🧺 AI 기반 맞춤형 의류 관리 도우미 🧺</p>
 </div>
 
@@ -94,8 +93,12 @@
 - 분석 작업의 진행 상태 및 결과 조회
 
 <div align="center">
-  <!-- 의류 이미지 업로드부터 분석 결과가 표시되는 과정을 보여주는 GIF 또는 이미지 -->
-  <img src="AI 의류 분석 시연 이미지 URL" alt="AI 의류 분석 시연" width="80%"/>
+  <img width="260" alt="의류 촬영" src="https://github.com/user-attachments/assets/0e64210d-09f0-46bb-a020-9b5375ad96a7" />
+  &nbsp;&nbsp;
+  <img width="260" alt="분석 결과" src="https://github.com/user-attachments/assets/2df61142-c9c3-47af-92b9-4cc060d85c6a" />
+</div>
+
+
 </div>
 
 <br/>
@@ -111,7 +114,11 @@
 
 <div align="center">
   <!-- 옷장 목록, 카테고리 필터 및 의류 상세 화면 -->
-  <img src="디지털 옷장 시연 이미지 URL" alt="디지털 옷장 시연" width="80%"/>
+  <img height="420" alt="옷장 목록" src="https://github.com/user-attachments/assets/4499f9eb-92f1-4c27-b450-68e866fbb67d" />
+  &nbsp;
+  <img height="420" alt="카테고리 필터" src="https://github.com/user-attachments/assets/5dab10a5-4964-47a6-a90c-f4cba07e56b6" />
+  &nbsp;
+  <img height="420" alt="의류 상세" src="https://github.com/user-attachments/assets/aeae6e54-9c9b-410c-82c2-d9c033fdd592" />
 </div>
 
 <br/>
@@ -126,7 +133,9 @@
 
 <div align="center">
   <!-- AI 채팅과 의류 이미지 상담 과정을 보여주는 GIF 또는 이미지 -->
-  <img src="AI 상담 시연 이미지 URL" alt="AI 의류 상담 시연" width="80%"/>
+  <img width="260" alt="AI 채팅" src="https://github.com/user-attachments/assets/c5480cd0-a817-4846-b21f-dd685d9a0ae8" />
+  &nbsp;&nbsp;
+  <img width="260" alt="의류 이미지 상담" src="https://github.com/user-attachments/assets/46105941-0ff9-4520-a9b0-09515cadac06" />
 </div>
 
 <br/>
@@ -140,7 +149,9 @@
 
 <div align="center">
   <!-- 현재 날씨와 세탁 추천 카드가 함께 보이는 화면 -->
-  <img src="날씨 기반 세탁 추천 이미지 URL" alt="날씨 기반 세탁 추천" width="80%"/>
+  <img width="260" alt="현재 날씨" src="https://github.com/user-attachments/assets/c08b8e70-59be-408e-99b8-1d4093c30400" />
+  &nbsp;&nbsp;
+  <img width="260" alt="세탁 추천 카드" src="https://github.com/user-attachments/assets/38d7a40d-7d97-48e4-b8cb-c66f164b5b62" />
 </div>
 
 <br/>
@@ -153,7 +164,11 @@
 
 <div align="center">
   <!-- 주변 세탁소 지도와 즐겨찾기 화면 -->
-  <img src="세탁소 즐겨찾기 이미지 URL" alt="세탁소 즐겨찾기" width="80%"/>
+  <img width="220" alt="주변 세탁소 지도" src="https://github.com/user-attachments/assets/0c3e3b4a-e2d5-44c2-80af-cc2971c12661" />
+  &nbsp;
+  <img width="220" alt="세탁소 상세" src="https://github.com/user-attachments/assets/cf247bd5-0f46-4027-903c-615c27a44ad9" />
+  &nbsp;
+  <img width="220" alt="즐겨찾기" src="https://github.com/user-attachments/assets/ac904c07-dbad-4683-9393-62c3df848015" />
 </div>
 
 <br/>
@@ -168,7 +183,9 @@
 
 <div align="center">
   <!-- 로그인, 회원가입 및 소셜 로그인 화면 -->
-  <img src="로그인 및 회원가입 이미지 URL" alt="로그인 및 회원가입" width="80%"/>
+  <img height="580" alt="로그인" src="https://github.com/user-attachments/assets/5a7578c7-a5d3-4ac6-9a80-6abfeb93ceed" />
+  &nbsp;&nbsp;
+  <img height="580" alt="회원가입" src="https://github.com/user-attachments/assets/cd75ac20-4015-4055-9fe5-fb18947fd71c" />
 </div>
 
 ---
