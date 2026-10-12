@@ -5,10 +5,13 @@ import com.posong.ai_laundry.global.error.code.GlobalErrorCode;
 import com.posong.ai_laundry.global.error.exception.GeneralException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 /**
@@ -40,6 +43,20 @@ public class GlobalExceptionHandler {
 		return ResponseEntity
 				.status(GlobalErrorCode.INVALID_INPUT_VALUE.getStatus())
 				.body(new ApiResponse<>(false, GlobalErrorCode.INVALID_INPUT_VALUE.getCode(), message, null));
+	}
+
+	/**
+	 * 요청 본문 파싱 실패, 필수 파라미터 누락, 파라미터 타입 불일치를 처리한다.
+	 */
+	@ExceptionHandler({
+			HttpMessageNotReadableException.class,
+			MissingServletRequestParameterException.class,
+			MethodArgumentTypeMismatchException.class
+	})
+	public ResponseEntity<ApiResponse<Void>> handleInvalidRequestException(Exception exception) {
+		return ResponseEntity
+				.status(GlobalErrorCode.INVALID_INPUT_VALUE.getStatus())
+				.body(ApiResponse.fail(GlobalErrorCode.INVALID_INPUT_VALUE));
 	}
 
 	@ExceptionHandler(MaxUploadSizeExceededException.class)
