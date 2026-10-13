@@ -12,7 +12,9 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 /**
  * 애플리케이션 전역에서 발생한 예외를 공통 API 응답 형식으로 변환한다.
@@ -51,9 +53,20 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler({
 			HttpMessageNotReadableException.class,
 			MissingServletRequestParameterException.class,
+			MissingServletRequestPartException.class,
 			MethodArgumentTypeMismatchException.class
 	})
 	public ResponseEntity<ApiResponse<Void>> handleInvalidRequestException(Exception exception) {
+		return ResponseEntity
+				.status(GlobalErrorCode.INVALID_INPUT_VALUE.getStatus())
+				.body(ApiResponse.fail(GlobalErrorCode.INVALID_INPUT_VALUE));
+	}
+
+	@ExceptionHandler(HandlerMethodValidationException.class)
+	public ResponseEntity<ApiResponse<Void>> handleMethodValidationException(HandlerMethodValidationException exception) {
+		if (exception.isForReturnValue()) {
+			return handleException(exception);
+		}
 		return ResponseEntity
 				.status(GlobalErrorCode.INVALID_INPUT_VALUE.getStatus())
 				.body(ApiResponse.fail(GlobalErrorCode.INVALID_INPUT_VALUE));

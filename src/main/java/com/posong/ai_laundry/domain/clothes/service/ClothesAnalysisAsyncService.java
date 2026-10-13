@@ -1,6 +1,7 @@
 package com.posong.ai_laundry.domain.clothes.service;
 
 import com.posong.ai_laundry.domain.clothes.constant.ClothesAnalysisJobStatus;
+import com.posong.ai_laundry.domain.clothes.constant.ClothesAnalysisFailure;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesAnalysisJobResDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesAnalysisJobStatusResDto;
 import com.posong.ai_laundry.domain.clothes.dto.ClothesAnalysisResDto;
@@ -82,7 +83,7 @@ public class ClothesAnalysisAsyncService {
 			transactionTemplate.executeWithoutResult(status -> complete(jobId, result));
 		} catch (Exception exception) {
 			log.warn("Failed to process clothes analysis job. jobId={}", jobId, exception);
-			transactionTemplate.executeWithoutResult(status -> fail(jobId, exception.getMessage()));
+			transactionTemplate.executeWithoutResult(status -> fail(jobId, ClothesAnalysisFailure.fromException(exception)));
 		}
 	}
 
@@ -105,7 +106,7 @@ public class ClothesAnalysisAsyncService {
 		try {
 			clothesAnalysisTaskExecutor.execute(() -> process(jobId));
 		} catch (TaskRejectedException exception) {
-			transactionTemplate.executeWithoutResult(status -> fail(jobId, "Clothes analysis queue is full."));
+			transactionTemplate.executeWithoutResult(status -> fail(jobId, ClothesAnalysisFailure.QUEUE_FULL));
 			log.warn("Clothes analysis task rejected. jobId={}", jobId, exception);
 			if (throwOnRejected) {
 				throw new GeneralException(ClothesErrorCode.CLOTHES_ANALYSIS_QUEUE_FULL);
@@ -126,9 +127,9 @@ public class ClothesAnalysisAsyncService {
 		job.complete(result);
 	}
 
-	private void fail(Long jobId, String errorMessage) {
+	private void fail(Long jobId, ClothesAnalysisFailure failure) {
 		clothesAnalysisJobRepository.findById(jobId)
-				.ifPresent(job -> job.fail(errorMessage == null ? "Clothes analysis failed." : errorMessage));
+				.ifPresent(job -> job.fail(failure.getErrorCode().getMessage()));
 	}
 
 	private MimeType validateAndResolveImage(MultipartFile image) {
