@@ -4,6 +4,17 @@ import com.posong.ai_laundry.domain.member.controller.LocalAuthController;
 import com.posong.ai_laundry.domain.member.service.LocalAuthService;
 import com.posong.ai_laundry.domain.store.controller.StoreFavoriteController;
 import com.posong.ai_laundry.domain.store.service.StoreFavoriteService;
+import com.posong.ai_laundry.domain.clothes.controller.ClothesAnalysisController;
+import com.posong.ai_laundry.domain.clothes.service.ClothesAnalysisAsyncService;
+import com.posong.ai_laundry.domain.weather.controller.WeatherController;
+import com.posong.ai_laundry.domain.weather.service.WeatherLaundryService;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import jakarta.validation.constraints.NotNull;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -25,15 +36,21 @@ class GlobalExceptionHandlerTest {
 	private LocalAuthService authService;
 	private StoreFavoriteService favoriteService;
 	private GlobalExceptionHandler handler;
+	private ClothesAnalysisAsyncService analysisService;
+	private WeatherLaundryService weatherService;
 	private MockMvc mockMvc;
 
 	@BeforeEach
 	void setUp() {
 		authService = mock(LocalAuthService.class);
 		favoriteService = mock(StoreFavoriteService.class);
+		analysisService = mock(ClothesAnalysisAsyncService.class);
+		weatherService = mock(WeatherLaundryService.class);
 		handler = spy(new GlobalExceptionHandler());
 		mockMvc = MockMvcBuilders.standaloneSetup(
-				new LocalAuthController(authService), new StoreFavoriteController(favoriteService))
+				new LocalAuthController(authService), new StoreFavoriteController(favoriteService),
+				new ClothesAnalysisController(analysisService), new WeatherController(weatherService),
+				new InvalidReturnController())
 				.setControllerAdvice(handler)
 				.build();
 	}
@@ -55,6 +72,45 @@ class GlobalExceptionHandlerTest {
 	void invalidPathVariableTypeReturnsBadRequest() throws Exception {
 		assertBadRequest(mockMvc.perform(delete("/api/stores/favorites/abc")),
 				MethodArgumentTypeMismatchException.class);
+	}
+
+	@Test
+	void missingImageReturnsBadRequest() throws Exception {
+		assertBadRequest(mockMvc.perform(multipart("/api/clothes/analysis")),
+				MissingServletRequestPartException.class);
+	}
+
+	@ParameterizedTest
+	@CsvSource({"-90.1,127", "90.1,127", "37,-180.1", "37,180.1"})
+	void invalidCoordinatesReturnBadRequest(String latitude, String longitude) throws Exception {
+		assertBadRequest(mockMvc.perform(get("/api/weather/laundry")
+				.param("latitude", latitude).param("longitude", longitude)),
+				HandlerMethodValidationException.class);
+	}
+
+	@ParameterizedTest
+	@CsvSource({"-90,-180", "90,180"})
+	void coordinateBoundariesReachService(String latitude, String longitude) throws Exception {
+		mockMvc.perform(get("/api/weather/laundry")
+				.param("latitude", latitude).param("longitude", longitude))
+				.andExpect(status().isOk());
+		verify(weatherService).getLaundryWeather(new java.math.BigDecimal(latitude), new java.math.BigDecimal(longitude));
+	}
+
+	@Test
+	void returnValueValidationIsStillServerError() throws Exception {
+		mockMvc.perform(get("/test/invalid-return"))
+				.andExpect(status().isInternalServerError())
+				.andExpect(jsonPath("code").value("COMMON_500"));
+	}
+
+	@RestController
+	static class InvalidReturnController {
+		@GetMapping("/test/invalid-return")
+		@NotNull
+		public String invalidReturn() {
+			return null;
+		}
 	}
 
 	@Test
@@ -80,7 +136,7 @@ class GlobalExceptionHandlerTest {
 				.andExpect(jsonPath("result").doesNotExist())
 				.andExpect(result -> assertInstanceOf(exceptionType, result.getResolvedException()));
 
-		verifyNoInteractions(authService, favoriteService);
+		verifyNoInteractions(authService, favoriteService, analysisService, weatherService);
 		verify(handler, never()).handleException(any(Exception.class));
 	}
 }
