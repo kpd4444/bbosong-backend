@@ -5,13 +5,18 @@ import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.MemoryCacheImageInputStream;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Iterator;
 
 public final class ImageFileValidator {
 
 	private static final long MAX_IMAGE_SIZE_BYTES = 20L * 1024 * 1024;
+	private static final int MAX_IMAGE_DIMENSION = 8192;
+	private static final long MAX_IMAGE_PIXELS = 20_000_000L;
 	private static final byte[] JPEG_MAGIC = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF};
 	private static final byte[] PNG_MAGIC = {(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
 
@@ -53,10 +58,31 @@ public final class ImageFileValidator {
 	}
 
 	private static void validateDecodableImage(MultipartFile file) throws IOException {
-		try (InputStream inputStream = file.getInputStream()) {
-			BufferedImage bufferedImage = ImageIO.read(inputStream);
-			if (bufferedImage == null) {
-				throw new IllegalArgumentException("Undecodable image");
+		try (InputStream inputStream = file.getInputStream();
+			 MemoryCacheImageInputStream imageInput = new MemoryCacheImageInputStream(inputStream)) {
+			Iterator<ImageReader> readers = ImageIO.getImageReaders(imageInput);
+			if (!readers.hasNext()) {
+				throw new IllegalArgumentException("Unsupported image reader");
+			}
+			ImageReader reader = readers.next();
+			try {
+				reader.setInput(imageInput, true, true);
+				int width = reader.getWidth(0);
+				int height = reader.getHeight(0);
+				if (width <= 0 || height <= 0) {
+					throw new IllegalArgumentException("Invalid image dimensions");
+				}
+				if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION
+						|| (long) width * height > MAX_IMAGE_PIXELS) {
+					throw new ImageDimensionsExceededException();
+				}
+				BufferedImage bufferedImage = reader.read(0);
+				if (bufferedImage == null) {
+					throw new IllegalArgumentException("Undecodable image");
+				}
+				bufferedImage.flush();
+			} finally {
+				reader.dispose();
 			}
 		}
 	}
