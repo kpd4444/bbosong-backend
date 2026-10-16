@@ -6,13 +6,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.MimeType;
-import org.springframework.web.multipart.MultipartFile;
+import com.posong.ai_laundry.global.file.ProcessedImage;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
-import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
@@ -28,12 +27,12 @@ public class ImageStorageService {
 	private final S3Client s3Client;
 	private final AwsStorageProperties awsStorageProperties;
 
-	public String uploadClothesImage(MultipartFile image, MimeType mimeType) {
-		return upload(image, mimeType, "clothes");
+	public String uploadClothesImage(ProcessedImage image) {
+		return upload(image, "clothes");
 	}
 
-	public String uploadChatImage(MultipartFile image, MimeType mimeType) {
-		return upload(image, mimeType, "chat");
+	public String uploadChatImage(ProcessedImage image) {
+		return upload(image, "chat");
 	}
 
 	public void delete(String imageKey) {
@@ -52,21 +51,18 @@ public class ImageStorageService {
 		}
 	}
 
-	private String upload(MultipartFile image, MimeType mimeType, String prefix) {
-		String key = buildImageKey(prefix, mimeType);
+	private String upload(ProcessedImage image, String prefix) {
+		String key = buildImageKey(prefix, image.mimeType());
 		try {
 			PutObjectRequest request = PutObjectRequest.builder()
 					.bucket(resolveBucket())
 					.key(key)
-					.contentType(mimeType.toString())
-					.contentLength(image.getSize())
+					.contentType(image.mimeType().toString())
+					.contentLength((long) image.bytes().length)
 					.build();
 
-			s3Client.putObject(request, RequestBody.fromInputStream(image.getInputStream(), image.getSize()));
+			s3Client.putObject(request, RequestBody.fromBytes(image.bytes()));
 			return key;
-		} catch (IOException exception) {
-			log.warn("Failed to read image before S3 upload", exception);
-			throw new GeneralException(GlobalErrorCode.INTERNAL_SERVER_ERROR);
 		} catch (RuntimeException exception) {
 			log.warn("Failed to upload image to S3. key={}", key, exception);
 			throw new GeneralException(GlobalErrorCode.INTERNAL_SERVER_ERROR);

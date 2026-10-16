@@ -20,14 +20,14 @@ import com.posong.ai_laundry.domain.member.repository.MemberRepository;
 import com.posong.ai_laundry.global.error.code.GlobalErrorCode;
 import com.posong.ai_laundry.global.error.exception.GeneralException;
 import com.posong.ai_laundry.global.file.ImageFileSizeExceededException;
-import com.posong.ai_laundry.global.file.ImageFileValidator;
+import com.posong.ai_laundry.global.file.ImageProcessor;
+import com.posong.ai_laundry.global.file.ProcessedImage;
 import com.posong.ai_laundry.global.storage.ImageStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.MimeType;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -47,13 +47,13 @@ public class ClothesService {
 	public ClothesSaveResDto save(Long memberId, ClothesSaveReqDto request, MultipartFile image) {
 		Member member = memberRepository.findById(memberId)
 				.orElseThrow(() -> new GeneralException(MemberErrorCode.MEMBER_NOT_FOUND));
-		MimeType imageMimeType = validateAndResolveImage(image);
+		ProcessedImage processedImage = validateAndProcessImage(image);
 
 		String normalizedCategoryName = normalizeCategoryName(request.categoryName());
 		Category category = categoryRepository.findByName(normalizedCategoryName)
 				.orElseGet(() -> createCategorySafely(normalizedCategoryName));
 
-		String imageKey = imageStorageService.uploadClothesImage(image, imageMimeType);
+		String imageKey = imageStorageService.uploadClothesImage(processedImage);
 		try {
 			Clothes clothes = clothesRepository.saveAndFlush(clothesMapper.toClothes(member, category, request, imageKey));
 			return clothesMapper.toClothesSaveResDto(clothes);
@@ -169,13 +169,13 @@ public class ClothesService {
 		return value != null && !value.isBlank();
 	}
 
-	private MimeType validateAndResolveImage(MultipartFile image) {
+	private ProcessedImage validateAndProcessImage(MultipartFile image) {
 		if (image == null || image.isEmpty()) {
 			throw new GeneralException(ClothesErrorCode.IMAGE_REQUIRED);
 		}
 
 		try {
-			return ImageFileValidator.detectSupportedMimeType(image);
+			return ImageProcessor.process(image);
 		} catch (ImageFileSizeExceededException exception) {
 			throw new GeneralException(GlobalErrorCode.FILE_SIZE_EXCEEDED);
 		} catch (IllegalArgumentException exception) {

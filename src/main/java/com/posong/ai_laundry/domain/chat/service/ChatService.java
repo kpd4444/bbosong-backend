@@ -16,7 +16,8 @@ import com.posong.ai_laundry.global.ai.OpenAiChatOptionsFactory;
 import com.posong.ai_laundry.global.error.code.GlobalErrorCode;
 import com.posong.ai_laundry.global.error.exception.GeneralException;
 import com.posong.ai_laundry.global.file.ImageFileSizeExceededException;
-import com.posong.ai_laundry.global.file.ImageFileValidator;
+import com.posong.ai_laundry.global.file.ImageProcessor;
+import com.posong.ai_laundry.global.file.ProcessedImage;
 import com.posong.ai_laundry.global.resilience.ExternalApiCallTimeoutException;
 import com.posong.ai_laundry.global.resilience.ExternalApiCircuitBreaker;
 import com.posong.ai_laundry.global.resilience.ExternalApiCircuitOpenException;
@@ -34,7 +35,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.MimeType;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Duration;
@@ -109,16 +109,16 @@ public class ChatService {
 	public ChatSendResDto sendMessage(Long memberId, String content, MultipartFile image) {
 		Member member = memberRepository.findById(memberId)
 				.orElseThrow(() -> new GeneralException(MemberErrorCode.MEMBER_NOT_FOUND));
-		MimeType imageMimeType = validateInput(content, image);
+		ProcessedImage processedImage = validateInput(content, image);
 
 		ChatRoom chatRoom = chatRoomRepository.findByMember_MemberId(memberId)
 				.orElseGet(() -> createChatRoomSafely(member));
 
 		String normalizedContent = normalizeContent(content);
 		String savedUserContent = hasText(normalizedContent) ? normalizedContent : IMAGE_ONLY_PLACEHOLDER;
-		String imageKey = image == null || image.isEmpty()
+		String imageKey = processedImage == null
 				? null
-				: imageStorageService.uploadChatImage(image, imageMimeType);
+				: imageStorageService.uploadChatImage(processedImage);
 
 		try {
 			ChatMessage userMessage = chatMessageRepository.save(chatMapper.toUserMessage(chatRoom, savedUserContent, imageKey));
@@ -131,8 +131,7 @@ public class ChatService {
 					messages,
 					userMessage.getChatMessageId(),
 					normalizedContent,
-					image,
-					imageMimeType
+					processedImage
 			);
 			ChatMessage assistantMessage = chatMessageRepository.save(chatMapper.toAssistantMessage(chatRoom, assistantAnswer));
 
@@ -161,8 +160,7 @@ public class ChatService {
 			List<ChatMessage> messages,
 			Long currentUserMessageId,
 			String currentContent,
-			MultipartFile image,
-			MimeType imageMimeType
+			ProcessedImage image
 	) {
 		List<Message> promptMessages = new ArrayList<>();
 		promptMessages.add(new SystemMessage(SYSTEM_PROMPT));
@@ -178,7 +176,7 @@ public class ChatService {
 			}
 		}
 
-		promptMessages.add(buildCurrentUserMessage(currentContent, image, imageMimeType));
+		promptMessages.add(buildCurrentUserMessage(currentContent, image));
 
 		String responseText;
 		try {
@@ -211,18 +209,18 @@ public class ChatService {
 		return formattedText.replaceAll("\\n{3,}", "\n\n");
 	}
 
-	private UserMessage buildCurrentUserMessage(String content, MultipartFile image, MimeType imageMimeType) {
+	private UserMessage buildCurrentUserMessage(String content, ProcessedImage image) {
 		String promptText = hasText(content)
 				? content
 				: "첨부한 이미지를 보고 의류 관리 방법을 알려줘.";
 
-		if (image == null || image.isEmpty()) {
+		if (image == null) {
 			return new UserMessage(promptText);
 		}
 
 		return UserMessage.builder()
 				.text(promptText)
-				.media(new Media(imageMimeType, image.getResource()))
+				.media(new Media(image.mimeType(), image.resource()))
 				.build();
 	}
 
@@ -240,7 +238,7 @@ public class ChatService {
 		}
 	}
 
-	private MimeType validateInput(String content, MultipartFile image) {
+	private ProcessedImage validateInput(String content, MultipartFile image) {
 		if (!hasText(content) && (image == null || image.isEmpty())) {
 			throw new GeneralException(ChatErrorCode.CHAT_INPUT_REQUIRED);
 		}
@@ -250,7 +248,7 @@ public class ChatService {
 		}
 
 		try {
-			return ImageFileValidator.detectSupportedMimeType(image);
+			return ImageProcessor.process(image);
 		} catch (ImageFileSizeExceededException exception) {
 			throw new GeneralException(GlobalErrorCode.FILE_SIZE_EXCEEDED);
 		} catch (IllegalArgumentException exception) {
