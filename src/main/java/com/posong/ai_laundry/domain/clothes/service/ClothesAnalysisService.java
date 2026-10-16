@@ -7,7 +7,8 @@ import com.posong.ai_laundry.global.ai.OpenAiChatOptionsFactory;
 import com.posong.ai_laundry.global.error.code.GlobalErrorCode;
 import com.posong.ai_laundry.global.error.exception.GeneralException;
 import com.posong.ai_laundry.global.file.ImageFileSizeExceededException;
-import com.posong.ai_laundry.global.file.ImageFileValidator;
+import com.posong.ai_laundry.global.file.ImageProcessor;
+import com.posong.ai_laundry.global.file.ProcessedImage;
 import com.posong.ai_laundry.global.resilience.ExternalApiCallTimeoutException;
 import com.posong.ai_laundry.global.resilience.ExternalApiCircuitBreaker;
 import com.posong.ai_laundry.global.resilience.ExternalApiCircuitOpenException;
@@ -82,8 +83,8 @@ public class ClothesAnalysisService {
 	private Duration openAiCallTimeout;
 
 	public ClothesAnalysisResDto analyze(MultipartFile image) {
-		MimeType imageMimeType = validateAndResolveImage(image);
-		return analyze(image.getResource(), imageMimeType);
+		ProcessedImage processedImage = validateAndProcessImage(image);
+		return analyze(processedImage.resource(), processedImage.mimeType());
 	}
 
 	public ClothesAnalysisResDto analyze(byte[] imageData, MimeType imageMimeType) {
@@ -137,13 +138,13 @@ public class ClothesAnalysisService {
 		}
 	}
 
-	private MimeType validateAndResolveImage(MultipartFile image) {
+	private ProcessedImage validateAndProcessImage(MultipartFile image) {
 		if (image == null || image.isEmpty()) {
 			throw new GeneralException(ClothesErrorCode.IMAGE_REQUIRED);
 		}
 
 		try {
-			return ImageFileValidator.detectSupportedMimeType(image);
+			return ImageProcessor.process(image);
 		} catch (ImageFileSizeExceededException exception) {
 			throw new GeneralException(GlobalErrorCode.FILE_SIZE_EXCEEDED);
 		} catch (IllegalArgumentException exception) {

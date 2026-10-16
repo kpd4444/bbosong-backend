@@ -24,11 +24,16 @@ public final class ImageFileValidator {
 	}
 
 	public static MimeType detectSupportedMimeType(MultipartFile file) {
+		try (DecodedImage decoded = decode(file)) {
+			return decoded.mimeType();
+		}
+	}
+
+	static DecodedImage decode(MultipartFile file) {
 		validateSize(file);
 		try {
 			MimeType mimeType = detectByMagicNumber(file);
-			validateDecodableImage(file);
-			return mimeType;
+			return new DecodedImage(readValidatedImage(file), mimeType);
 		} catch (IOException exception) {
 			throw new IllegalArgumentException("Invalid image file", exception);
 		}
@@ -57,7 +62,7 @@ public final class ImageFileValidator {
 		}
 	}
 
-	private static void validateDecodableImage(MultipartFile file) throws IOException {
+	private static BufferedImage readValidatedImage(MultipartFile file) throws IOException {
 		try (InputStream inputStream = file.getInputStream();
 			 MemoryCacheImageInputStream imageInput = new MemoryCacheImageInputStream(inputStream)) {
 			Iterator<ImageReader> readers = ImageIO.getImageReaders(imageInput);
@@ -80,10 +85,17 @@ public final class ImageFileValidator {
 				if (bufferedImage == null) {
 					throw new IllegalArgumentException("Undecodable image");
 				}
-				bufferedImage.flush();
+				return bufferedImage;
 			} finally {
 				reader.dispose();
 			}
+		}
+	}
+
+	record DecodedImage(BufferedImage image, MimeType mimeType) implements AutoCloseable {
+		@Override
+		public void close() {
+			image.flush();
 		}
 	}
 
