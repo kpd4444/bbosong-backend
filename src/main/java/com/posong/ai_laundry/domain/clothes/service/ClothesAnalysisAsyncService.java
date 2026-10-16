@@ -11,7 +11,8 @@ import com.posong.ai_laundry.domain.clothes.repository.ClothesAnalysisJobReposit
 import com.posong.ai_laundry.global.error.code.GlobalErrorCode;
 import com.posong.ai_laundry.global.error.exception.GeneralException;
 import com.posong.ai_laundry.global.file.ImageFileSizeExceededException;
-import com.posong.ai_laundry.global.file.ImageFileValidator;
+import com.posong.ai_laundry.global.file.ImageProcessor;
+import com.posong.ai_laundry.global.file.ProcessedImage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -20,11 +21,9 @@ import org.springframework.core.task.TaskRejectedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.springframework.util.MimeType;
 import org.springframework.util.MimeTypeUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Executor;
@@ -51,11 +50,10 @@ public class ClothesAnalysisAsyncService {
 	}
 
 	public ClothesAnalysisJobResDto submit(Long memberId, MultipartFile image) {
-		MimeType imageMimeType = validateAndResolveImage(image);
-		byte[] imageData = readImageBytes(image);
+		ProcessedImage processedImage = validateAndProcessImage(image);
 
 		ClothesAnalysisJob job = clothesAnalysisJobRepository.saveAndFlush(
-				ClothesAnalysisJob.create(memberId, imageMimeType.toString(), imageData)
+				ClothesAnalysisJob.create(memberId, processedImage.mimeType().toString(), processedImage.bytes())
 		);
 
 		enqueueOrFail(job.getAnalysisJobId(), true);
@@ -132,25 +130,17 @@ public class ClothesAnalysisAsyncService {
 				.ifPresent(job -> job.fail(failure.getErrorCode().getMessage()));
 	}
 
-	private MimeType validateAndResolveImage(MultipartFile image) {
+	private ProcessedImage validateAndProcessImage(MultipartFile image) {
 		if (image == null || image.isEmpty()) {
 			throw new GeneralException(ClothesErrorCode.IMAGE_REQUIRED);
 		}
 
 		try {
-			return ImageFileValidator.detectSupportedMimeType(image);
+			return ImageProcessor.process(image);
 		} catch (ImageFileSizeExceededException exception) {
 			throw new GeneralException(GlobalErrorCode.FILE_SIZE_EXCEEDED);
 		} catch (IllegalArgumentException exception) {
 			throw new GeneralException(ClothesErrorCode.INVALID_IMAGE_TYPE);
-		}
-	}
-
-	private byte[] readImageBytes(MultipartFile image) {
-		try {
-			return image.getBytes();
-		} catch (IOException exception) {
-			throw new GeneralException(GlobalErrorCode.INTERNAL_SERVER_ERROR);
 		}
 	}
 

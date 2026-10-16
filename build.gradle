@@ -18,6 +18,7 @@ repositories {
 }
 
 dependencies {
+	implementation 'com.drewnoakes:metadata-extractor:2.19.0'
 	implementation platform("org.springframework.ai:spring-ai-bom:2.0.0-M5")
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
