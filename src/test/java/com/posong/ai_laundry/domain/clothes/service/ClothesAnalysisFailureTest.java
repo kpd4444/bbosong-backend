@@ -46,7 +46,7 @@ class ClothesAnalysisFailureTest {
 		transactions = new TransactionTemplate(manager);
 		service = new ClothesAnalysisAsyncService(repository, analyzer, Runnable::run, transactions);
 		job = ClothesAnalysisJob.create(1L, "image/png", new byte[]{1});
-		when(repository.findById(7L)).thenReturn(Optional.of(job));
+		when(repository.findByIdForUpdate(7L)).thenReturn(Optional.of(job));
 		when(repository.findByAnalysisJobIdAndMemberId(7L, 1L)).thenReturn(Optional.of(job));
 	}
 
@@ -63,6 +63,7 @@ class ClothesAnalysisFailureTest {
 			assertFailure(ClothesErrorCode.CLOTHES_ANALYSIS_FAILED);
 			assertThat(appender.list).anySatisfy(event -> {
 				assertThat(event.getFormattedMessage()).contains("jobId=7");
+				assertThat(event.getThrowableProxy()).isNotNull();
 				assertThat(event.getThrowableProxy().getMessage()).isEqualTo(failure.getMessage());
 			});
 		} finally {
@@ -80,13 +81,13 @@ class ClothesAnalysisFailureTest {
 	}
 
 	@Test
-	void rejectedRecoveredJobStoresQueueFailure() {
+	void rejectedRecoveredJobRemainsPendingForNextSweep() {
 		org.springframework.test.util.ReflectionTestUtils.setField(job, "analysisJobId", 7L);
-		when(repository.findAllByStatus(ClothesAnalysisJobStatus.PENDING)).thenReturn(List.of(job));
+		when(repository.findIdsByStatus(eq(ClothesAnalysisJobStatus.PENDING), any())).thenReturn(List.of(7L));
 		service = new ClothesAnalysisAsyncService(repository, analyzer,
 				command -> { throw new TaskRejectedException("executor internal details"); }, transactions);
 		service.recoverUnfinishedJobs();
-		assertFailure(ClothesErrorCode.CLOTHES_ANALYSIS_QUEUE_FULL);
+		assertThat(job.getStatus()).isEqualTo(ClothesAnalysisJobStatus.PENDING);
 		verifyNoInteractions(analyzer);
 	}
 
