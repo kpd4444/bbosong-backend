@@ -95,7 +95,11 @@ class ImageProcessingRoutesTest {
 
 	@Test
 	void asyncJobPersistsProcessedBytesAndUsesThemForAi() throws Exception {
-		when(jobs.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+		when(jobs.saveAndFlush(any())).thenAnswer(invocation -> {
+			ClothesAnalysisJob job = invocation.getArgument(0);
+			org.springframework.test.util.ReflectionTestUtils.setField(job, "analysisJobId", 1L);
+			return job;
+		});
 		var service = new ClothesAnalysisAsyncService(jobs, analyzer, executor, null);
 		service.submit(1L, ImageFixtures.jpegWithExif(6));
 		var capture = ArgumentCaptor.forClass(ClothesAnalysisJob.class);
