@@ -146,7 +146,8 @@ public class ChatService {
 
 			return new ChatSendResDto(
 					chatMapper.toChatMessageResDto(userMessage),
-					chatMapper.toChatMessageResDto(assistantMessage)
+					chatMapper.toChatMessageResDto(assistantMessage),
+					List.of()
 			);
 		} catch (GeneralException exception) {
 			imageStorageService.delete(imageKey);
