@@ -100,6 +100,7 @@ public class ChatService {
 	private final ExternalApiCircuitBreaker externalApiCircuitBreaker;
 	private final OpenAiChatOptionsFactory openAiChatOptionsFactory;
 	private final ImageStorageService imageStorageService;
+	private final ChatScopeClassifier chatScopeClassifier;
 
 	@Value("${external-api.openai.call-timeout:60s}")
 	private Duration openAiCallTimeout;
@@ -134,6 +135,24 @@ public class ChatService {
 			List<ChatMessage> messages = chatMessageRepository.findAllByChatRoom_ChatRoomIdOrderByCreatedAtAscChatMessageIdAsc(chatRoom.getChatRoomId());
 			if (messages.size() > MAX_CONTEXT_MESSAGES) {
 				messages = messages.subList(messages.size() - MAX_CONTEXT_MESSAGES, messages.size());
+			}
+
+			// 이미지가 첨부된 상담은 의류 사진 상담이 주 용도라 분류를 건너뛴다.
+			if (processedImage == null) {
+				List<ChatMessage> history = messages.stream()
+						.filter(message -> !message.getChatMessageId().equals(userMessage.getChatMessageId()))
+						.toList();
+				ChatScopeClassifier.ScopeResult scope = chatScopeClassifier.classify(history, normalizedContent);
+				if (!scope.inScope()) {
+					log.info("Out-of-scope chat message rejected: reason={}", scope.reason());
+					ChatMessage rejectionMessage = chatMessageRepository.save(
+							chatMapper.toAssistantMessage(chatRoom, ChatScopeMessages.REJECTION_MESSAGE));
+					return new ChatSendResDto(
+							chatMapper.toChatMessageResDto(userMessage),
+							chatMapper.toChatMessageResDto(rejectionMessage),
+							ChatScopeMessages.SUGGESTED_QUESTIONS
+					);
+				}
 			}
 
 			String assistantAnswer = generateAssistantAnswer(
